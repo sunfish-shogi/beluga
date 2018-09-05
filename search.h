@@ -18,14 +18,39 @@ inline Score ScoreMin(Score a, Score b) {
   return a < b ? a : b;
 }
 
+struct PV {
+  Square moves[60];
+  int length;
+
+  void Clear() {
+    length = 0;
+  }
+
+  void Set(Square curr, PV& child) {
+    moves[0] = curr;
+    memcpy(&moves[1], child.moves, sizeof(child.moves[0]) * child.length);
+    length = child.length + 1;
+  }
+
+  LPCTSTR ToString() const {
+    thread_local TCHAR buf[128];
+    for (int i = 0; i < length; i++) {
+      memcpy(&buf[i * 2], moves[i].ToString(), sizeof(TCHAR) * 2);
+    }
+    buf[length * 2] = L'\0';
+    return buf;
+  }
+};
+
 struct SearchResult {
   Square move;
   Score score;
+  PV pv;
 };
 
 class SearchHandler {
 public:
-  virtual void OnIterate(int depth, Square move, Score score, int nodes) = 0;
+  virtual void OnIterate(int depth, const PV& pv, Score score, int nodes) = 0;
   virtual void OnFailHigh(int depth, Score score, int nodes) = 0;
   virtual void OnFailLow(int depth, Score score, int nodes) = 0;
 };
@@ -57,7 +82,8 @@ private:
   };
 
   struct Node {
-    Move moves[64];
+    Move moves[48];
+    PV pv;
     int nmoves;
     int mi;
   };
@@ -82,6 +108,8 @@ private:
     TTType type;
     Square bestMove;
   };
+
+  void StorePV(Board board, const PV& pv, Score score);
 
   Score Search(Tree& tree, int depth, Score alpha, Score beta);
 

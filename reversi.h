@@ -325,6 +325,8 @@ public:
 
   bool IsEnd() const;
 
+  bool MustPass() const;
+
   Bitboard DoMove(const Square& square);
 
   void UndoMove(const Square& square, const Bitboard& mask);

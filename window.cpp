@@ -213,6 +213,13 @@ void MainWindow::OnCreate(HWND hwnd, LPARAM lp) {
   );
   SendMessage(msgText_, WM_SETFONT, (WPARAM)hMessageFont_, TRUE);
 
+  hEditFont_ = CreateFont(
+    MessageFontSize, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+    ANSI_CHARSET, OUT_DEFAULT_PRECIS,
+    CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
+    VARIABLE_PITCH | FF_ROMAN, L"Courier New");
+  objList_.push_back(hEditFont_);
+
   kifuText_ = CreateWindow(
     L"EDIT", L"",
     WS_CHILD | WS_VISIBLE | ES_LEFT |
@@ -220,7 +227,7 @@ void MainWindow::OnCreate(HWND hwnd, LPARAM lp) {
     KifuTextX, KifuTextY, KifuTextWidth, KifuTextHeight,
     hwnd, NULL, hInstance_, NULL
   );
-  SendMessage(kifuText_, WM_SETFONT, (WPARAM)hMessageFont_, TRUE);
+  SendMessage(kifuText_, WM_SETFONT, (WPARAM)hEditFont_, TRUE);
 
   evalText_ = CreateWindow(
     L"EDIT", L"",
@@ -229,7 +236,7 @@ void MainWindow::OnCreate(HWND hwnd, LPARAM lp) {
     EvalTextX, EvalTextY, EvalTextWidth, EvalTextHeight,
     hwnd, NULL, hInstance_, NULL
   );
-  SendMessage(evalText_, WM_SETFONT, (WPARAM)hMessageFont_, TRUE);
+  SendMessage(evalText_, WM_SETFONT, (WPARAM)hEditFont_, TRUE);
 
 #if DEBUG_TEXT
   debugText_ = CreateWindow(
@@ -239,7 +246,7 @@ void MainWindow::OnCreate(HWND hwnd, LPARAM lp) {
     DebugTextX, DebugTextY, DebugTextWidth, DebugTextHeight,
     hwnd, NULL, hInstance_, NULL
   );
-  SendMessage(debugText_, WM_SETFONT, (WPARAM)hMessageFont_, TRUE);
+  SendMessage(debugText_, WM_SETFONT, (WPARAM)hEditFont_, TRUE);
 #endif
 
   SetTimer(mainWindow_, MainTimer, 0, NULL);
@@ -339,10 +346,11 @@ void MainWindow::Paint(HDC wdc) {
     DiskColor playerColor = gameManager_.GetPlayerColor();
     bool end = board.IsEnd();
     auto totalScore = board.GetTotalScore();
-    Score score = gameManager_.GetSearchScore();
-    int faceSrcX = gameManager_.IsPlayerTurn() ? FaceSrcXNormal : FaceSrcXThink;
-    int faceSrcY = (end && totalScore.winner == playerColor ) || score <= -10 * ScoreScale ? FaceSrcYSad
-                 : (end && totalScore.winner != Winner::Draw) || score >=  10 * ScoreScale ? FaceSrcYHappy
+    SearchResult searchResult = gameManager_.GetSearchResult();
+    int faceSrcX = end || gameManager_.IsPlayerTurn() ? FaceSrcXNormal
+                                                      : FaceSrcXThink;
+    int faceSrcY = (end && totalScore.winner == playerColor ) || searchResult.score <= -10 * ScoreScale ? FaceSrcYSad
+                 : (end && totalScore.winner != Winner::Draw) || searchResult.score >=  10 * ScoreScale ? FaceSrcYHappy
                                                                                            : FaceSrcYNormal;
     BitBlt(dc, FaceX, FaceY, FaceWidth, FaceHeight, bmpFace_, faceSrcX, faceSrcY, SRCCOPY);
 
@@ -533,10 +541,10 @@ void MainWindow::OnMove() {
 }
 
 void MainWindow::OnSearchScore() {
-  Score score = gameManager_.GetSearchScore();
-  PushMainThreadJob([this, score]() {
+  SearchResult searchResult = gameManager_.GetSearchResult();
+  PushMainThreadJob([this, searchResult]() {
     TCHAR buf[1024];
-    wsprintf(buf, L"%d ", score / ScoreScale);
+    wsprintf(buf, L"%d ", searchResult.score / ScoreScale);
     LRESULT len = SendMessage(evalText_, WM_GETTEXTLENGTH, 0, 0);
     SendMessage(evalText_, EM_SETSEL, (WPARAM)len, (LPARAM)len);
     SendMessage(evalText_, EM_REPLACESEL, (WPARAM)false, (LPARAM)buf);
@@ -547,9 +555,9 @@ void MainWindow::OnPass() {
 }
 
 void MainWindow::OnResult() {
-  Board board = gameManager_.GetBoard();
+  Board board           = gameManager_.GetBoard();
   DiskColor playerColor = gameManager_.GetPlayerColor();
-  ComLevel level = gameManager_.GetComLevel();
+  ComLevel level        = gameManager_.GetComLevel();
   PushMainThreadJob([this, board, playerColor, level]() {
     SendMessage(mainWindow_, WM_BELUGA_REPAINT, 0, 0);
     TotalScore totalScore = board.GetTotalScore();

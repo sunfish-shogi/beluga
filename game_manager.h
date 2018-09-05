@@ -69,8 +69,8 @@ public:
     return playerColor_;
   }
 
-  Score GetSearchScore() {
-    return searchScore_;
+  SearchResult GetSearchResult() {
+    return searchResult_;
   }
 
   Square GetLastMove() {
@@ -96,7 +96,7 @@ public:
     }
   }
 
-  void OnIterate(int depth, Square move, Score score, int nodes);
+  void OnIterate(int depth, const PV& pv, Score score, int nodes);
   void OnFailHigh(int depth, Score score, int nodes);
   void OnFailLow(int depth, Score score, int nodes);
 
@@ -108,20 +108,22 @@ private:
 
   void ComTurn();
 
-  GameSetting setting_;
+  GameManagerHandler* handler_;
   Searcher searcher_;
+  GameSetting setting_;
+  int searchDepth_;
+
   std::atomic<Board> board_;
   std::atomic<ComLevel> comLevel_;
   std::atomic<DiskColor> playerColor_;
-  std::atomic<Score> searchScore_;
   std::atomic<Square> lastMove_;
+  std::atomic<SearchResult> searchResult_;
   std::atomic<Square> playerMove_;
   std::atomic<bool> playerTurn_;
   std::atomic<bool> stop_;
-  GameManagerHandler* handler_;
-  std::mt19937 random_;
+
   std::thread thread_;
-  int searchDepth_;
+  std::mt19937 random_;
 
 };
 

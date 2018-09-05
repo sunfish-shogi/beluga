@@ -23,11 +23,12 @@ Searcher::Searcher(SearchHandler* handler)
 
 SearchResult Searcher::Search(const Board& board, int maxDepth) {
   Tree tree;
-  Node& node = tree.stack[0];
   tree.ply = 0;
   tree.board = board;
   tree.nodes = 0;
 
+  Node& node = tree.stack[0];
+  node.pv.Clear();
 
   GenerateMoves(tree, Square::Invalid(), 0, 0, 0);
   if (node.nmoves == 0) {
@@ -84,15 +85,35 @@ SearchResult Searcher::Search(const Board& board, int maxDepth) {
     });
 
     if (handler_ != nullptr) {
-      handler_->OnIterate(depth, node.moves[0].move, node.moves[0].score, tree.nodes);
+      handler_->OnIterate(depth, node.pv, node.moves[0].score, tree.nodes);
     }
+
+    StorePV(board, node.pv, node.moves[0].score);
   }
 
-  return { node.moves[0].move, node.moves[0].score };
+  return { node.moves[0].move, node.moves[0].score, node.pv };
+}
+
+void Searcher::StorePV(Board board, const PV& pv, Score score) {
+  for (int i = 0; i < pv.length; i++) {
+    if (board.MustPass()) {
+      board.Pass();
+    }
+
+    uint64_t hash = board.GetHash();
+    uint64_t hashKey = hash & TTMask;
+    int depth = (pv.length - i) * DepthOnePly;
+    tt_.get()[hashKey] = { hash, score, depth, TTActual, pv.moves[i] };
+
+    board.DoMove(pv.moves[i]);
+  }
 }
 
 Score Searcher::Search(Tree& tree, int depth, Score alpha, Score beta) {
   Node& node = tree.stack[tree.ply];
+  if (tree.ply != 0) {
+    node.pv.Clear();
+  }
 
   tree.nodes++;
 
@@ -108,13 +129,15 @@ Score Searcher::Search(Tree& tree, int depth, Score alpha, Score beta) {
     return tree.board.GetNextDisk() == ColorBlack ? score : -score;
   }
 
+  bool isPV = (beta != alpha + 1);
+
   Square ttMove = Square::Invalid();
 #if TT
   uint64_t hash = tree.board.GetHash();
   uint64_t hashKey = hash & TTMask;
   auto ttElem = tt_.get()[hashKey];
   if (ttElem.hash == hash) {
-    if (ttElem.depth >= depth) {
+    if (!isPV && ttElem.depth >= depth) {
       switch (ttElem.type) {
       case TTActual:
         return ttElem.score;
@@ -141,11 +164,8 @@ Score Searcher::Search(Tree& tree, int depth, Score alpha, Score beta) {
   if (node.nmoves == 0) {
     // pass
     tree.board.Pass();
-    tree.ply++;
     Score score = -Search(tree, depth - DepthOnePly, -beta, -alpha);
     tree.board.Pass();
-    tree.ply--;
-
     return score;
   }
 
@@ -186,6 +206,8 @@ Score Searcher::Search(Tree& tree, int depth, Score alpha, Score beta) {
     if (m.score > bestScore) {
       bestScore = m.score;
       bestMove = m.move;
+      Node& child = tree.stack[tree.ply + 1];
+      node.pv.Set(m.move, child.pv);
       if (bestScore >= beta) {
         break;
       }

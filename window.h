@@ -77,6 +77,7 @@ private:
   HDC bmpBoard_;
   HDC bmpDisk_;
   HDC bmpFace_;
+  HFONT hEditFont_;
   HFONT hMessageFont_;
   HFONT hButtonFont_;
   HWND msgText_;

@@ -10,7 +10,6 @@ void GameManager::Start(const GameSetting& setting) {
   stop_ = false;
   searcher_.Reset();
   board_ = Board::GetEmptyBoard();
-  searchScore_.store(0);
 
   thread_ = std::thread([this]() {
     GameLoop();
@@ -52,10 +51,11 @@ void GameManager::GameLoop() {
     default:        searchDepth_ = 9; break;
     }
 
-    comLevel_.store(comLevel);
-    playerColor_.store(playerColor);
-    board_.store(Board::GetNormalInitBoard());
-    searchScore_.store(0);
+    comLevel_     = comLevel;
+    playerColor_  = playerColor;
+    board_        = Board::GetNormalInitBoard();
+    searchResult_ = { Square::Invalid(), 0 };
+
     handler_->OnNewGame();
 
     while (!board_.load().IsEnd()) {
@@ -88,15 +88,17 @@ void GameManager::PlayerTurn() {
 
   auto board = board_.load();
 
+  // pass
   if (board.GenerateMoves() == Bitboard(0)) {
-    // pass
     board.Pass();
-    board_.store(board);
+    board_ = board;
+
     handler_->OnPass();
+
     return;
   }
 
-  // move
+  // wait for human player's move
   Square move;
   while (true) {
     if (stop_) { return; }
@@ -106,9 +108,13 @@ void GameManager::PlayerTurn() {
       break;
     }
   }
+
+  // do move
   board.DoMove(move);
-  board_.store(board);
-  lastMove_.store(move);
+
+  board_    = board;
+  lastMove_ = move;
+
   handler_->OnMove();
 }
 
@@ -119,23 +125,27 @@ void GameManager::ComTurn() {
   auto board = board_.load();
 
   if (board == Board::GetNormalInitBoard()) {
-    // first move
+    // first move is always F5
     Square move(5, 4);
     board.DoMove(move);
-    board_.store(board);
-    lastMove_.store(move);
-    searchScore_.store(Score(0));
+
+    board_    = board;
+    lastMove_ = move;
+
     handler_->OnSearchScore();
     handler_->OnMove();
+
     return;
   }
 
   auto begin = std::chrono::system_clock::now();
-  auto searchResult = searcher_.Search(board_, searchDepth_);
+  SearchResult searchResult = searcher_.Search(board_, searchDepth_);
   auto end = std::chrono::system_clock::now();
+
   TCHAR buf[1024];
   wsprintf(buf, L"%d milliseconds\r\n", (int)std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count());
   handler_->OnLog(buf);
+
   if (searchResult.move.IsInvalid()) {
     // pass
     board.Pass();
@@ -144,30 +154,31 @@ void GameManager::ComTurn() {
     return;
   }
 
-  // move
   board.DoMove(searchResult.move);
-  board_.store(board);
-  lastMove_.store(searchResult.move);
-  searchScore_.store(searchResult.score);
+
+  board_        = board;
+  lastMove_     = searchResult.move;
+  searchResult_ = searchResult;
+
   handler_->OnSearchScore();
   handler_->OnMove();
 }
 
-void GameManager::OnIterate(int depth, Square move, Score score, int nodes) {
+void GameManager::OnIterate(int depth, const PV& pv, Score score, int nodes) {
   TCHAR buf[1024];
-  wsprintf(buf, L"Depth %d: %s: Score %d: Nodes %d\r\n", depth, move.ToString(), score, nodes);
+  wsprintf(buf, L"Depth %2d: %8d: %s: %d\r\n", depth, nodes, pv.ToString(), score);
   handler_->OnLog(buf);
 }
 
 void GameManager::OnFailHigh(int depth, Score score, int nodes) {
   TCHAR buf[1024];
-  wsprintf(buf, L"Depth %d: fail-high: Score %d: Nodes %d\r\n", depth, score, nodes);
+  wsprintf(buf, L"Depth %2d: %8d: fail-high: %d\r\n", depth, nodes, score);
   handler_->OnLog(buf);
 }
 
 void GameManager::OnFailLow(int depth, Score score, int nodes) {
   TCHAR buf[1024];
-  wsprintf(buf, L"Depth %d: fail-low: Score %d: Nodes %d\r\n", depth, score, nodes);
+  wsprintf(buf, L"Depth %2d: %8d: fail-low: %d\r\n", depth, nodes, score);
   handler_->OnLog(buf);
 }
 

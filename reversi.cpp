@@ -218,6 +218,15 @@ bool Board::IsEnd() const {
   return true;
 }
 
+bool Board::MustPass() const {
+  for (Square square = Square::Begin(); square != Square::End(); square = square.Next()) {
+    if (CanMove(square, nextDisk_)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 void Board::Pass() {
   nextDisk_ = nextDisk_ == ColorBlack ? ColorWhite : ColorBlack;
 }
