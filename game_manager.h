@@ -99,6 +99,7 @@ public:
   void OnIterate(int depth, const PV& pv, Score score, int nodes);
   void OnFailHigh(int depth, Score score, int nodes);
   void OnFailLow(int depth, Score score, int nodes);
+  void OnEnding(const PV& pv, Score score, int nodes);
 
 private:
 
@@ -112,6 +113,7 @@ private:
   Searcher searcher_;
   GameSetting setting_;
   int searchDepth_;
+  int endingSearchDepth_;
 
   std::atomic<Board> board_;
   std::atomic<ComLevel> comLevel_;

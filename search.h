@@ -45,7 +45,7 @@ struct PV {
 struct SearchResult {
   Square move;
   Score score;
-  PV pv;
+  bool ending;
 };
 
 class SearchHandler {
@@ -53,6 +53,7 @@ public:
   virtual void OnIterate(int depth, const PV& pv, Score score, int nodes) = 0;
   virtual void OnFailHigh(int depth, Score score, int nodes) = 0;
   virtual void OnFailLow(int depth, Score score, int nodes) = 0;
+  virtual void OnEnding(const PV& pv, Score score, int nodes) = 0;
 };
 
 class Searcher {
@@ -64,7 +65,7 @@ public:
 
   Searcher(SearchHandler* handler = nullptr);
 
-  SearchResult Search(const Board& board, int depth);
+  SearchResult Search(const Board& board, int depth, int endingDepth);
 
   void Reset() {
     stop_ = false;
@@ -111,7 +112,11 @@ private:
 
   void StorePV(Board board, const PV& pv, Score score);
 
-  Score Search(Tree& tree, int depth, Score alpha, Score beta);
+  Score SearchEnding(Tree& tree, Score alpha, Score beta, bool passed);
+
+  Score Search(Tree& tree, int depth, Score alpha, Score beta, bool passed);
+
+  void GenerateEndingMoves(Tree& tree, Score alpha, Score beta);
 
   void GenerateMoves(Tree& tree, Square ttMove, int depth, Score alpha, Score beta);
 

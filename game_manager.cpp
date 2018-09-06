@@ -44,11 +44,11 @@ void GameManager::GameLoop() {
     bool lastPassed = false;
 
     switch (comLevel) {
-    case ComLevel1: searchDepth_ = 3; break;
-    case ComLevel2: searchDepth_ = 4; break;
-    case ComLevel3: searchDepth_ = 5; break;
-    case ComLevel4: searchDepth_ = 7; break;
-    default:        searchDepth_ = 9; break;
+    case ComLevel1: searchDepth_ = 3; endingSearchDepth_ = 5; break;
+    case ComLevel2: searchDepth_ = 4; endingSearchDepth_ = 7; break;
+    case ComLevel3: searchDepth_ = 5; endingSearchDepth_ = 9; break;
+    case ComLevel4: searchDepth_ = 7; endingSearchDepth_ = 11; break;
+    default:        searchDepth_ = 9; endingSearchDepth_ = 13; break;
     }
 
     comLevel_     = comLevel;
@@ -138,21 +138,23 @@ void GameManager::ComTurn() {
     return;
   }
 
-  auto begin = std::chrono::system_clock::now();
-  SearchResult searchResult = searcher_.Search(board_, searchDepth_);
-  auto end = std::chrono::system_clock::now();
-
-  TCHAR buf[1024];
-  wsprintf(buf, L"%d milliseconds\r\n", (int)std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count());
-  handler_->OnLog(buf);
-
-  if (searchResult.move.IsInvalid()) {
+  if (board.MustPass()) {
     // pass
     board.Pass();
     board_.store(board);
     handler_->OnPass();
     return;
   }
+
+  auto begin = std::chrono::system_clock::now();
+  SearchResult searchResult = searcher_.Search(board_, searchDepth_, endingSearchDepth_);
+  auto end = std::chrono::system_clock::now();
+
+  if (stop_) { return; }
+
+  TCHAR buf[1024];
+  wsprintf(buf, L"%d milliseconds\r\n", (int)std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count());
+  handler_->OnLog(buf);
 
   board.DoMove(searchResult.move);
 
@@ -179,6 +181,12 @@ void GameManager::OnFailHigh(int depth, Score score, int nodes) {
 void GameManager::OnFailLow(int depth, Score score, int nodes) {
   TCHAR buf[1024];
   wsprintf(buf, L"Depth %2d: %8d: fail-low: %d\r\n", depth, nodes, score);
+  handler_->OnLog(buf);
+}
+
+void GameManager::OnEnding(const PV& pv, Score score, int nodes) {
+  TCHAR buf[1024];
+  wsprintf(buf, L"Ending: %8d: %s: %d\r\n", nodes, pv.ToString(), score);
   handler_->OnLog(buf);
 }
 

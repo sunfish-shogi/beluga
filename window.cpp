@@ -307,11 +307,11 @@ void MainWindow::Repaint() {
 }
 
 void MainWindow::Paint(HDC wdc) {
-  HDC dc;
+  HDC     dc;
   HBITMAP bmp;
 
   bmp = CreateCompatibleBitmap(wdc, BackgroundWidth, BackgroundHeight);
-  dc = CreateCompatibleDC(wdc);
+  dc  = CreateCompatibleDC(wdc);
 
   SelectObject(dc, bmp);
 
@@ -331,8 +331,8 @@ void MainWindow::Paint(HDC wdc) {
     Board board = gameManager_.GetBoard();
     for (Square square = Square::Begin(); square != Square::End(); square = square.Next()) {
       DiskColor stone = board.Get(square);
-      int x = square.GetX();
-      int y = square.GetY();
+      int       x     = square.GetX();
+      int       y     = square.GetY();
       switch (stone) {
       case ColorBlack:
         BitBlt(dc, SquareX + x * SquareWidth, SquareY + y * SquareHeight, DiskWidth, DiskHeight, bmpDisk_, 0, 0, SRCCOPY);
@@ -343,15 +343,31 @@ void MainWindow::Paint(HDC wdc) {
       }
     }
 
-    DiskColor playerColor = gameManager_.GetPlayerColor();
-    bool end = board.IsEnd();
-    auto totalScore = board.GetTotalScore();
+    DiskColor    playerColor  = gameManager_.GetPlayerColor();
     SearchResult searchResult = gameManager_.GetSearchResult();
-    int faceSrcX = end || gameManager_.IsPlayerTurn() ? FaceSrcXNormal
-                                                      : FaceSrcXThink;
-    int faceSrcY = (end && totalScore.winner == playerColor ) || searchResult.score <= -10 * ScoreScale ? FaceSrcYSad
-                 : (end && totalScore.winner != Winner::Draw) || searchResult.score >=  10 * ScoreScale ? FaceSrcYHappy
-                                                                                           : FaceSrcYNormal;
+    bool         end          = board.IsEnd();
+    auto         totalScore   = board.GetTotalScore();
+
+    int faceSrcX;
+    if (end || gameManager_.IsPlayerTurn()) {
+      faceSrcX = FaceSrcXNormal;
+    } else {
+      faceSrcX = FaceSrcXThink;
+    }
+
+    int faceSrcY;
+    if ((end && totalScore.winner == playerColor)
+        || searchResult.score <= -10 * ScoreScale
+        || (searchResult.ending && searchResult.score <= -1)){
+      faceSrcY = FaceSrcYSad;
+    } else if ((end && totalScore.winner != Winner::Draw)
+        || searchResult.score >=  10 * ScoreScale
+        || (searchResult.ending && searchResult.score >= 1)) {
+      faceSrcY = FaceSrcYHappy;
+    } else {
+      faceSrcY = FaceSrcYNormal;
+    }
+
     BitBlt(dc, FaceX, FaceY, FaceWidth, FaceHeight, bmpFace_, faceSrcX, faceSrcY, SRCCOPY);
 
     break;
@@ -385,11 +401,11 @@ void MainWindow::OnChangeState() {
   for (auto button : StateButtonMap.at(state_)) {
     int x, y;
     if (button == ButtonBack) {
-      x = MenuBackButtonX;
-      y = MenuBackButtonY;
+      x      = MenuBackButtonX;
+      y      = MenuBackButtonY;
     } else {
-      x = MenuButtonX;
-      y = nextY;
+      x      = MenuButtonX;
+      y      = nextY;
       nextY += MenuButtonHeight;
     }
 
@@ -410,62 +426,62 @@ void MainWindow::OnPushButton(Button button) {
   switch (button) {
   case ButtonFree:
     gameSetting_.gameType = GameTypeFree;
-    state_ = StateComLevelSelection;
+    state_                = StateComLevelSelection;
     OnChangeState();
     break;
 
   case ButtonTournament:
-    gameSetting_.gameType = GameTypeTournament;
+    gameSetting_.gameType   = GameTypeTournament;
     gameSetting_.playerDisk = PlayerDiskRandom;
-    state_ = StateDuringGame;
+    state_                  = StateDuringGame;
     OnChangeState();
     break;
 
   case ButtonLevel1:
     gameSetting_.comLevel = ComLevel1;
-    state_ = StateDiskSelection;
+    state_                = StateDiskSelection;
     OnChangeState();
     break;
 
   case ButtonLevel2:
     gameSetting_.comLevel = ComLevel2;
-    state_ = StateDiskSelection;
+    state_                = StateDiskSelection;
     OnChangeState();
     break;
 
   case ButtonLevel3:
     gameSetting_.comLevel = ComLevel3;
-    state_ = StateDiskSelection;
+    state_                = StateDiskSelection;
     OnChangeState();
     break;
 
   case ButtonLevel4:
     gameSetting_.comLevel = ComLevel4;
-    state_ = StateDiskSelection;
+    state_                = StateDiskSelection;
     OnChangeState();
     break;
 
   case ButtonLevel5:
     gameSetting_.comLevel = ComLevel5;
-    state_ = StateDiskSelection;
+    state_                = StateDiskSelection;
     OnChangeState();
     break;
 
   case ButtonBlack:
     gameSetting_.playerDisk = PlayerDiskBlack;
-    state_ = StateDuringGame;
+    state_                  = StateDuringGame;
     OnChangeState();
     break;
 
   case ButtonWhite:
     gameSetting_.playerDisk = PlayerDiskWhite;
-    state_ = StateDuringGame;
+    state_                  = StateDuringGame;
     OnChangeState();
     break;
 
   case ButtonRandom:
     gameSetting_.playerDisk = PlayerDiskRandom;
-    state_ = StateDuringGame;
+    state_                  = StateDuringGame;
     OnChangeState();
     break;
 

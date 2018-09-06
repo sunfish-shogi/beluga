@@ -21,19 +21,40 @@ Searcher::Searcher(SearchHandler* handler)
 #endif
 }
 
-SearchResult Searcher::Search(const Board& board, int maxDepth) {
+SearchResult Searcher::Search(const Board& board, int maxDepth, int endingDepth) {
+  if (board.MustPass()) {
+    return { Square::Invalid(), 0 };
+  }
+
   Tree tree;
   tree.ply = 0;
   tree.board = board;
   tree.nodes = 0;
 
   Node& node = tree.stack[0];
+
+  Bitboard occupied = board.GetBlackBoard() | board.GetWhiteBoard();
+  Bitboard empty = ~occupied;
+
+  // ending search
+  if (empty.Count() <= endingDepth) {
+    SearchEnding(tree, -64 * ScoreScale, 64 * ScoreScale, false);
+
+    // sort by score value
+    std::stable_sort(node.moves, node.moves + node.nmoves, [](const Move& lhs, const Move& rhs) {
+      return lhs.score > rhs.score;
+    });
+
+    if (handler_ != nullptr) {
+      handler_->OnEnding(node.pv, node.moves[0].score, tree.nodes);
+    }
+
+    return { node.moves[0].move, node.moves[0].score, true };
+  }
+
   node.pv.Clear();
 
   GenerateMoves(tree, Square::Invalid(), 0, 0, 0);
-  if (node.nmoves == 0) {
-    return { Square::Invalid(), 0 };
-  }
 
   std::shuffle(node.moves, node.moves + node.nmoves, random_);
 
@@ -45,7 +66,7 @@ SearchResult Searcher::Search(const Board& board, int maxDepth) {
 
     if (depth == DepthOnePly) {
       // initial depth
-      Search(tree, depth, -ScoreInfinity, ScoreInfinity);
+      Search(tree, depth, -ScoreInfinity, ScoreInfinity, false);
 
     } else {
       // aspiration search
@@ -53,7 +74,7 @@ SearchResult Searcher::Search(const Board& board, int maxDepth) {
       Score alpha = node.moves[0].score - delta;
       Score beta  = node.moves[0].score + delta;
       while (true) {
-        Score score = Search(tree, depth, alpha, beta);
+        Score score = Search(tree, depth, alpha, beta, false);
         if (stop_.load()) {
           break;
         }
@@ -91,7 +112,7 @@ SearchResult Searcher::Search(const Board& board, int maxDepth) {
     StorePV(board, node.pv, node.moves[0].score);
   }
 
-  return { node.moves[0].move, node.moves[0].score, node.pv };
+  return { node.moves[0].move, node.moves[0].score, false };
 }
 
 void Searcher::StorePV(Board board, const PV& pv, Score score) {
@@ -109,19 +130,68 @@ void Searcher::StorePV(Board board, const PV& pv, Score score) {
   }
 }
 
-Score Searcher::Search(Tree& tree, int depth, Score alpha, Score beta) {
+Score Searcher::SearchEnding(Tree& tree, Score alpha, Score beta, bool passed) {
+  tree.nodes++;
+
+  Node& node = tree.stack[tree.ply];
+  node.pv.Clear();
+
+  GenerateEndingMoves(tree, alpha, beta);
+
+  // pass
+  if (node.nmoves == 0) {
+    if (passed) {
+      int bc      = tree.board.GetBlackBoard().Count();
+      int wc      = tree.board.GetWhiteBoard().Count();
+      Score score = (bc - wc) * ScoreScale;
+      return tree.board.GetNextDisk() == ColorBlack ? score : -score;
+    }
+
+    tree.board.Pass();
+    Score score = -SearchEnding(tree, -beta, -alpha, true);
+    tree.board.Pass();
+    return score;
+  }
+
+  Score bestScore = -ScoreInfinity;
+
+  while (true) {
+    if (node.mi >= node.nmoves) {
+      break;
+    }
+    Move& m = node.moves[node.mi++];
+
+    Score newAlpha = ScoreMax(alpha, bestScore);
+
+    Bitboard mask = tree.board.DoMove(m.move);
+    tree.ply++;
+    m.score = -SearchEnding(tree, -beta, -newAlpha, false);
+    tree.board.UndoMove(m.move, mask);
+    tree.ply--;
+
+    if (stop_.load()) {
+      return 0;
+    }
+
+    if (m.score > bestScore) {
+      bestScore = m.score;
+      Node& child = tree.stack[tree.ply + 1];
+      node.pv.Set(m.move, child.pv);
+      if (bestScore >= beta) {
+        break;
+      }
+    }
+  }
+
+  return bestScore;
+}
+
+Score Searcher::Search(Tree& tree, int depth, Score alpha, Score beta, bool passed) {
+  tree.nodes++;
+
   Node& node = tree.stack[tree.ply];
   if (tree.ply != 0) {
     node.pv.Clear();
-  }
-
-  tree.nodes++;
-
-  if (tree.board.IsEnd()) {
-    int bc = tree.board.GetBlackBoard().Count();
-    int wc = tree.board.GetWhiteBoard().Count();
-    Score score = (bc - wc) * ScoreScale;
-    return tree.board.GetNextDisk() == ColorBlack ? score : -score;
   }
 
   if (depth < DepthOnePly) {
@@ -161,10 +231,17 @@ Score Searcher::Search(Tree& tree, int depth, Score alpha, Score beta) {
     GenerateMoves(tree, ttMove, depth, alpha, beta);
   }
 
+  // pass
   if (node.nmoves == 0) {
-    // pass
+    if (passed) {
+      int bc      = tree.board.GetBlackBoard().Count();
+      int wc      = tree.board.GetWhiteBoard().Count();
+      Score score = (bc - wc) * ScoreScale;
+      return tree.board.GetNextDisk() == ColorBlack ? score : -score;
+    }
+
     tree.board.Pass();
-    Score score = -Search(tree, depth - DepthOnePly, -beta, -alpha);
+    Score score = -Search(tree, depth, -beta, -alpha, true);
     tree.board.Pass();
     return score;
   }
@@ -187,12 +264,12 @@ Score Searcher::Search(Tree& tree, int depth, Score alpha, Score beta) {
 #if NEGA_SCOUT
     if (isFirst || beta == newAlpha + 1) {
 #endif
-      m.score = -Search(tree, newDepth, -beta, -newAlpha);
+      m.score = -Search(tree, newDepth, -beta, -newAlpha, false);
 #if NEGA_SCOUT
     } else {
-      m.score = -Search(tree, newDepth, -(newAlpha + 1), -newAlpha);
+      m.score = -Search(tree, newDepth, -(newAlpha + 1), -newAlpha, false);
       if (m.score >= newAlpha + 1) {
-        m.score = -Search(tree, newDepth, -beta, -newAlpha);
+        m.score = -Search(tree, newDepth, -beta, -newAlpha, false);
       }
     }
 #endif
@@ -229,6 +306,23 @@ Score Searcher::Search(Tree& tree, int depth, Score alpha, Score beta) {
 #endif
 
   return bestScore;
+}
+
+void Searcher::GenerateEndingMoves(Tree& tree, Score alpha, Score beta) {
+  Node& node = tree.stack[tree.ply];
+  node.nmoves = 0;
+  node.mi = 0;
+
+  Bitboard moves = tree.board.GenerateMoves();
+  if (moves == Bitboard(0)) {
+    return;
+  }
+
+  for (Square move = Square::Begin(); move != Square::End(); move = move.Next()) {
+    if (moves.Get(move)) {
+      node.moves[node.nmoves++] = { move, 0 };
+    }
+  }
 }
 
 void Searcher::GenerateMoves(Tree& tree, Square ttMove, int depth, Score alpha, Score beta) {
@@ -275,7 +369,7 @@ void Searcher::GenerateMoves(Tree& tree, Square ttMove, int depth, Score alpha, 
 #endif
     Bitboard mask = tree.board.DoMove(node.moves[mi].move);
     tree.ply++;
-    node.moves[mi].score = -Search(tree, newDepth, -beta, -alpha);
+    node.moves[mi].score = -Search(tree, newDepth, -beta, -alpha, false);
     tree.board.UndoMove(node.moves[mi].move, mask);
     tree.ply--;
   }
