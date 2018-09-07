@@ -40,19 +40,19 @@ public:
   }
 
   int GetX() const {
-      return raw_ % 8;
+    return raw_ % 8;
   }
 
   int GetY() const {
-      return raw_ / 8;
+    return raw_ / 8;
   }
 
   int GetRaw() const {
-      return raw_;
+    return raw_;
   }
 
   Square Dir(Direction dir) const {
-      return Square(raw_ + DirDelta[dir]);
+    return Square(raw_ + DirDelta[dir]);
   }
 
   bool IsWall(Direction dir) const {
@@ -60,15 +60,15 @@ public:
   }
 
   Square Prev() const {
-      return Square(raw_ - 1);
+    return Square(raw_ - 1);
   }
 
   Square Next() const {
-      return Square(raw_ + 1);
+    return Square(raw_ + 1);
   }
 
   static Square Begin() {
-      return Square(0);
+    return Square(0);
   }
 
   static Square End() {
@@ -76,11 +76,11 @@ public:
   }
 
   static Square Invalid() {
-      return Square(-1);
+    return Square(-1);
   }
 
   bool IsInvalid() const {
-      return raw_ == -1;
+    return raw_ == -1;
   }
 
   LPCTSTR ToString() const {
@@ -100,9 +100,9 @@ class Bitboard {
 public:
 
   Bitboard() = default;
-  Bitboard(const Bitboard& src) = default;
+  constexpr Bitboard(const Bitboard& src) = default;
   Bitboard(Bitboard&&) = default;
-  Bitboard(uint64_t raw) : raw_(raw) {}
+  constexpr Bitboard(uint64_t raw) : raw_(raw) {}
 
   Bitboard& operator=(const Bitboard&) = default;
   Bitboard& operator=(Bitboard&&) = default;
@@ -120,7 +120,7 @@ public:
     return *this;
   }
 
-  Bitboard operator&(const Bitboard& rhs) const {
+  constexpr Bitboard operator&(const Bitboard& rhs) const {
     return Bitboard(raw_ & rhs.raw_);
   }
 
@@ -129,7 +129,7 @@ public:
     return *this;
   }
 
-  Bitboard operator|(const Bitboard& rhs) const {
+  constexpr Bitboard operator|(const Bitboard& rhs) const {
     return Bitboard(raw_ | rhs.raw_);
   }
 
@@ -138,55 +138,79 @@ public:
     return *this;
   }
 
-  Bitboard operator^(const Bitboard& rhs) const {
+  constexpr Bitboard operator^(const Bitboard& rhs) const {
     return Bitboard(raw_ ^ rhs.raw_);
   }
 
-  Bitboard operator~() const {
+  constexpr Bitboard operator~() const {
     return Bitboard(~raw_);
   }
 
-  Bitboard LeftUp() const {
+  constexpr Bitboard LeftUp() const {
     return Bitboard(raw_ >> 9) & MaskCol1to7();
   }
 
-  Bitboard Up() const {
+  constexpr Bitboard Up() const {
     return Bitboard(raw_ >> 8);
   }
 
-  Bitboard RightUp() const {
+  constexpr Bitboard RightUp() const {
     return Bitboard(raw_ >> 7) & MaskCol2to8();
   }
 
-  Bitboard Left() const {
+  constexpr Bitboard Left() const {
     return Bitboard(raw_ >> 1) & MaskCol1to7();
   }
 
-  Bitboard Right() const {
+  constexpr Bitboard Right() const {
     return Bitboard(raw_ << 1) & MaskCol2to8();
   }
 
-  Bitboard LeftDown() const {
+  constexpr Bitboard LeftDown() const {
     return Bitboard(raw_ << 7) & MaskCol1to7();
   }
 
-  Bitboard Down() const {
+  constexpr Bitboard Down() const {
     return Bitboard(raw_ << 8);
   }
 
-  Bitboard RightDown() const {
+  constexpr Bitboard RightDown() const {
     return Bitboard(raw_ << 9) & MaskCol2to8();
   }
 
-  static Bitboard MaskCol1to7() {
+  static constexpr Bitboard MaskCol1to7() {
     return 0b01111111,01111111,01111111,01111111,01111111,01111111,01111111,01111111;
   }
 
-  static Bitboard MaskCol2to8() {
+  static constexpr Bitboard MaskCol2to8() {
     return 0b11111110,11111110,11111110,11111110,11111110,11111110,11111110,11111110;
   }
 
-  int Count() const {
+  static constexpr Bitboard MaskBox() {
+    return 0b00000000,00000000,00111100,00111100,00111100,00111100,00000000,00000000;
+  }
+
+  static constexpr Bitboard MaskInnerSide() {
+    return 0b00000000,00111100,01000010,01000010,01000010,01000010,00111100,00000000;
+  }
+
+  static constexpr Bitboard MaskSide() {
+    return 0b01111110,10000001,10000001,10000001,10000001,10000001,10000001,01111110;
+  }
+
+  static constexpr Bitboard MaskX() {
+    return 0b00000000,01000010,00000000,00000000,00000000,00000000,01000010,00000000;
+  }
+
+  static constexpr Bitboard MaskCorner() {
+    return 0b10000001,00000000,00000000,00000000,00000000,00000000,00000000,10000001;
+  }
+
+  static constexpr Bitboard MaskA() {
+    return 0b00100100,00000000,10000001,00000000,00000000,10000001,00000000,00100100;
+  }
+
+  constexpr int Count() const {
     uint64_t x = raw_;
     x = x - ((x >> 1) & 0x5555555555555555llu);
     x = (x & 0x3333333333333333llu) + ((x >> 2) & 0x3333333333333333llu);

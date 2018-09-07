@@ -2,9 +2,11 @@
 #include "search.h"
 #include <algorithm>
 
-#define TT         1
-#define TT_MOVE    1
-#define NEGA_SCOUT 1
+#define ROOT_MOVE_SHUFFLE 1
+#define TT                1
+#define TT_MOVE           1
+#define NEGA_SCOUT        1
+#define PROBCUT           1
 
 namespace beluga {
 
@@ -56,7 +58,9 @@ SearchResult Searcher::Search(const Board& board, int maxDepth, int endingDepth)
 
   GenerateMoves(tree, Square::Invalid(), 0, 0, 0);
 
+#if ROOT_MOVE_SHUFFLE
   std::shuffle(node.moves, node.moves + node.nmoves, random_);
+#endif
 
   for (int depth = DepthOnePly; depth < maxDepth + DepthOnePly; depth += DepthOnePly) {
     // clear score values
@@ -70,7 +74,7 @@ SearchResult Searcher::Search(const Board& board, int maxDepth, int endingDepth)
 
     } else {
       // aspiration search
-      Score delta = 5 * ScoreScale;
+      Score delta = 8 * ScoreScale;
       Score alpha = node.moves[0].score - delta;
       Score beta  = node.moves[0].score + delta;
       while (true) {
@@ -92,7 +96,7 @@ SearchResult Searcher::Search(const Board& board, int maxDepth, int endingDepth)
             handler_->OnFailHigh(depth, score, tree.nodes);
           }
         }
-        delta += 5 * ScoreScale;
+        delta += 10 * ScoreScale;
       }
     }
 
@@ -222,6 +226,17 @@ Score Searcher::Search(Tree& tree, int depth, Score alpha, Score beta, bool pass
       }
     }
     ttMove = ttElem.bestMove;
+  }
+#endif
+
+#if PROBCUT
+  if (tree.ply != 0 && depth >= 5 * DepthOnePly && beta < 40 * ScoreScale) {
+    int pbeta = beta + 10 * ScoreScale;
+    int pdepth = depth - 1 * DepthOnePly;
+    Score score = Search(tree, pdepth, pbeta - 1, pbeta, false);
+    if (score >= pbeta) {
+      return beta;
+    }
   }
 #endif
 
@@ -359,7 +374,9 @@ void Searcher::GenerateMoves(Tree& tree, Square ttMove, int depth, Score alpha, 
     return;
   }
 
-  int newDepth = depth <= DepthOnePly * 7 ? DepthOnePly : depth - DepthOnePly * 6;
+  int newDepth = depth <= DepthOnePly * 4 ? DepthOnePly
+               : depth <= DepthOnePly * 7 ? depth - DepthOnePly * 4
+                                          : DepthOnePly * 3;
   for (int mi = 0; mi < node.nmoves; mi++) {
 #if TT_MOVE
     if (node.moves[mi].move == ttMove) {
@@ -374,93 +391,73 @@ void Searcher::GenerateMoves(Tree& tree, Square ttMove, int depth, Score alpha, 
     tree.ply--;
   }
   
-  std::stable_sort(node.moves, node.moves + node.nmoves, [](const Move& lhs, const Move& rhs) {
+  std::sort(node.moves, node.moves + node.nmoves, [](const Move& lhs, const Move& rhs) {
     return lhs.score > rhs.score;
   });
 }
 
-const Score Material1[64] = {
-   800, -100,  -40,  -30,  -30,  -40, -400,  800,
-  -400, -800,  -30,  -20,  -20,  -30, -800, -400,
-   -40,  -30,  -20,  -10,  -10,  -20,  -30,  -40,
-   -30,  -20,  -10,    0,    0,  -10,  -20,  -30,
-   -30,  -20,  -10,    0,    0,  -10,  -20,  -30,
-   -40,  -30,  -20,  -10,  -10,  -20,  -30,  -40,
-  -400, -800,  -30,  -20,  -20,  -30, -800, -400,
-   800, -400,  -40,  -30,  -30,  -40, -400,  800,
-};
-
-const Score Material2[64] = {
-   500, -100,    0,   20,   20,    0, -100,  500,
-  -100, -300,  -40,    0,    0,  -40, -300, -100,
-     0,  -40,  -80,   20,   20,  -80,  -40,    0,
-    20,    0,   20,   50,   50,   20,    0,   20,
-    20,    0,   20,   50,   50,   20,    0,   20,
-     0,  -40,  -80,   20,   20,  -80,  -40,    0,
-  -100, -300,  -40,    0,    0,  -40, -300, -100,
-   500, -100,    0,   20,   20,    0, -100,  500,
-};
-
-const Score Material3[64] = {
-   150,   50,   80,   80,   80,   80,   50,  150,
-    50,   20,   40,   60,   60,   40,   20,   50,
-    80,   40,   80,   80,   80,   80,   40,   80,
-    80,   60,   80,   80,   80,   80,   60,   80,
-    80,   60,   80,   80,   80,   80,   60,   80,
-    80,   40,   80,   80,   80,   80,   40,   80,
-    50,   20,   40,   60,   60,   40,   20,   50,
-   150,   50,   80,   80,   80,   80,   50,  150,
-};
+inline int linear(int begin, int end, int count, int maxCount) {
+  return begin + (end - begin) * count / maxCount;
+}
 
 Score Searcher::Evaluate(const Board& board) {
   Score score = 0;
   Bitboard black = board.GetBlackBoard();
   Bitboard white = board.GetWhiteBoard();
+
   Bitboard occupied = black | white;
   Bitboard empty = ~occupied;
-
+  Bitboard outerMask = empty.Up()     | empty.Down()     | empty.Left()    | empty.Right()
+                     | empty.LeftUp() | empty.LeftDown() | empty.RightUp() | empty.RightDown();
+  Bitboard innerMask = ~outerMask;
+  Bitboard bopen = (black.Up()     | black.Down()     | black.Left()    | black.Right()
+                  | black.LeftUp() | black.LeftDown() | black.RightUp() | black.RightDown()) & empty;
+  Bitboard wopen = (white.Up()     | white.Down()     | white.Left()    | white.Right()
+                  | white.LeftUp() | white.LeftDown() | white.RightUp() | white.RightDown()) & empty;
   int count = occupied.Count();
-  if (count <= 32) {
-    Score material1 = 0;
-    Score material2 = 0;
-    for (Square square = Square::Begin(); square != Square::End(); square = square.Next()) {
-      if (black.Get(square)) {
-        material1 += Material1[square.GetRaw()];
-        material2 += Material2[square.GetRaw()];
-      } else if (white.Get(square)) {
-        material1 -= Material1[square.GetRaw()];
-        material2 -= Material2[square.GetRaw()];
-      }
-    }
-    score += (material1 * (32 - count) + material2 * count) / 32;
-  } else {
-    Score material2 = 0;
-    Score material3 = 0;
-    for (Square square = Square::Begin(); square != Square::End(); square = square.Next()) {
-      if (black.Get(square)) {
-        material2 += Material2[square.GetRaw()];
-        material3 += Material3[square.GetRaw()];
-      } else if (white.Get(square)) {
-        material2 -= Material2[square.GetRaw()];
-        material3 -= Material3[square.GetRaw()];
-      }
-    }
-    score += (material2 * (64 - count) + material3 * (count - 32)) / 32;
-  }
 
-  const Score FixedDiskScore = 1000 * (64 - count) / 64;
-  int fixb = CountFixedDisk(black);
-  score += fixb * FixedDiskScore;
-  int fixw = CountFixedDisk(white);
-  score -= fixw * FixedDiskScore;
+  const Score DangerX = linear(-800, -100,  count, 64);
+  Bitboard emptyCorner = empty & Bitboard::MaskCorner();
+  Bitboard dangerXMask = (emptyCorner.LeftUp() | emptyCorner.LeftDown() | emptyCorner.RightUp() | emptyCorner.RightDown());
+  score += (black & dangerXMask).Count() * DangerX;
+  score -= (white & dangerXMask).Count() * DangerX;
 
-  const Score OpenScore = -300;
-  Bitboard bopen = black.Up()     | black.Down()     | black.Left()    | black.Right()
-                 | black.LeftUp() | black.LeftDown() | black.RightUp() | black.RightDown();
-  score += (bopen & empty).Count() * OpenScore;
-  Bitboard wopen = white.Up()     | white.Down()     | white.Left()    | white.Right()
-                 | white.LeftUp() | white.LeftDown() | white.RightUp() | white.RightDown();
-  score -= (wopen & empty).Count() * OpenScore;
+  const Score SafeX = linear(500, 100,  count, 64);
+  Bitboard safeXMask = dangerXMask ^ Bitboard::MaskX();
+  score += (black & safeXMask).Count() * SafeX;
+  score -= (white & safeXMask).Count() * SafeX;
+
+  const Score DangerC = linear(-500, -100,  count, 64);
+  Bitboard emptyA = empty & Bitboard::MaskA();
+  Bitboard dangerCMask = (emptyCorner.Left() | emptyCorner.Right() | emptyCorner.Up() | emptyCorner.Down())
+                       & (emptyA.Left() | emptyA.Right() | emptyA.Up() | emptyA.Down());
+  score += (black & dangerCMask).Count() * DangerC;
+  score -= (white & dangerCMask).Count() * DangerC;
+
+  const Score InnerScore1 = linear(-200, 50, count, 64);
+  score += (black & innerMask & Bitboard::MaskBox()).Count() * InnerScore1;
+  score -= (white & innerMask & Bitboard::MaskBox()).Count() * InnerScore1;
+
+  const Score InnerScore2 = linear(-200, 0, count, 64);
+  score += (black & innerMask & ~Bitboard::MaskBox()).Count() * InnerScore2;
+  score -= (white & innerMask & ~Bitboard::MaskBox()).Count() * InnerScore2;
+
+  const Score OuterScore = linear(-200, -100, count, 64);
+  score += (black & outerMask).Count() * OuterScore;
+  score -= (white & outerMask).Count() * OuterScore;
+
+  const Score OpenScore = linear(-200, -400, count, 64);
+  score += bopen.Count() * OpenScore;
+  score -= wopen.Count() * OpenScore;
+
+  const Score OpenScore3 = linear(-250, -400, count, 64);
+  constexpr Bitboard openMask3 = Bitboard::MaskInnerSide();
+  score += (bopen & openMask3).Count() * OpenScore3;
+  score -= (wopen & openMask3).Count() * OpenScore3;
+
+  const Score FixedDiskScore = linear(1600, 50, count, 64);
+  score += CountFixedDisk(black) * FixedDiskScore;
+  score -= CountFixedDisk(white) * FixedDiskScore;
 
   return score;
 }

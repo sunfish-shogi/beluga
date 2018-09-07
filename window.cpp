@@ -598,9 +598,11 @@ void MainWindow::OnEnd() {
 }
 
 void MainWindow::OnLog(LPCTSTR msg) {
+#if DEBUG_TEXT
   LRESULT len = SendMessage(debugText_, WM_GETTEXTLENGTH, 0, 0);
   SendMessage(debugText_, EM_SETSEL, (WPARAM)len, (LPARAM)len);
   SendMessage(debugText_, EM_REPLACESEL, (WPARAM)false, (LPARAM)msg);
+#endif
 }
 
 } // namespace beluga

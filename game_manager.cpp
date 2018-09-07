@@ -46,9 +46,9 @@ void GameManager::GameLoop() {
     switch (comLevel) {
     case ComLevel1: searchDepth_ = 3; endingSearchDepth_ = 5; break;
     case ComLevel2: searchDepth_ = 4; endingSearchDepth_ = 7; break;
-    case ComLevel3: searchDepth_ = 5; endingSearchDepth_ = 9; break;
-    case ComLevel4: searchDepth_ = 7; endingSearchDepth_ = 11; break;
-    default:        searchDepth_ = 9; endingSearchDepth_ = 13; break;
+    case ComLevel3: searchDepth_ = 5; endingSearchDepth_ = 10; break;
+    case ComLevel4: searchDepth_ = 6; endingSearchDepth_ = 12; break;
+    default:        searchDepth_ = 8; endingSearchDepth_ = 14; break;
     }
 
     comLevel_     = comLevel;
