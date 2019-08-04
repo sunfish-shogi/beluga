@@ -103,24 +103,24 @@ extern LPCTSTR SquareStrings[64] = {
 };
 
 bool Board::CanMove(const Square& square) const {
-  return CanMove(square, nextDisk_);
-}
-
-bool Board::CanMove(const Square& square, DiskColor color) const {
   if (Get(square) != ColorNone) {
     return false;
   }
 
-  for (int di = 0; di < 8; di++) {
-    Direction dir = (Direction)di;
-    bool reversible = false;
+  return CanMove(square, nextDisk_);
+}
 
-    if (square.IsWall(dir)) {
-      continue;
-    }
+bool Board::CanMove(const Square& square, DiskColor color) const {
+  if (color == ColorBlack) {
+    for (int di = 0; di < 8; di++) {
+      Direction dir = (Direction)di;
+      bool reversible = false;
 
-    for (Square sq = square.Dir(dir); ; sq = sq.Dir(dir)) {
-      if (color == ColorBlack) {
+      if (square.IsWall(dir)) {
+        continue;
+      }
+
+      for (Square sq = square.Dir(dir); ; sq = sq.Dir(dir)) {
         if (white_.Get(sq)) {
           reversible = true;
         } else if (reversible && black_.Get(sq)) {
@@ -129,7 +129,21 @@ bool Board::CanMove(const Square& square, DiskColor color) const {
           break;
         }
 
-      } else {
+        if (sq.IsWall(dir)) {
+          break;
+        }
+      }
+    }
+  } else {
+    for (int di = 0; di < 8; di++) {
+      Direction dir = (Direction)di;
+      bool reversible = false;
+
+      if (square.IsWall(dir)) {
+        continue;
+      }
+
+      for (Square sq = square.Dir(dir); ; sq = sq.Dir(dir)) {
         if (black_.Get(sq)) {
           reversible = true;
         } else if (reversible && white_.Get(sq)) {
@@ -137,10 +151,10 @@ bool Board::CanMove(const Square& square, DiskColor color) const {
         } else {
           break;
         }
-      }
 
-      if (sq.IsWall(dir)) {
-        break;
+        if (sq.IsWall(dir)) {
+          break;
+        }
       }
     }
   }
@@ -210,8 +224,15 @@ void Board::UndoMove(const Square& square, const Bitboard& mask) {
 }
 
 bool Board::IsEnd() const {
-  for (Square square = Square::Begin(); square != Square::End(); square = square.Next()) {
-    if (CanMove(square, ColorBlack) || CanMove(square, ColorWhite)) {
+  Bitboard open = GetOpenSquares(ColorWhite);
+  for (Square square = open.pick(); !square.IsInvalid(); square = open.pick()) {
+    if (CanMove(square, ColorBlack)) {
+      return false;
+    }
+  }
+  open = GetOpenSquares(ColorBlack);
+  for (Square square = open.pick(); !square.IsInvalid(); square = open.pick()) {
+    if (CanMove(square, ColorWhite)) {
       return false;
     }
   }
@@ -219,7 +240,9 @@ bool Board::IsEnd() const {
 }
 
 bool Board::MustPass() const {
-  for (Square square = Square::Begin(); square != Square::End(); square = square.Next()) {
+  // FIXME: 不具合あり？まだ打てるのにパスした。
+  Bitboard open = GetOpenSquares(nextDisk_ == ColorBlack ? ColorWhite : ColorBlack);
+  for (Square square = open.pick(); !square.IsInvalid(); square = open.pick()) {
     if (CanMove(square, nextDisk_)) {
       return false;
     }
@@ -233,12 +256,24 @@ void Board::Pass() {
 
 Bitboard Board::GenerateMoves() const {
   Bitboard moves = Bitboard(0);
-  for (Square square = Square::Begin(); square != Square::End(); square = square.Next()) {
-    if (CanMove(square)) {
+  Bitboard open = GetOpenSquares(nextDisk_ == ColorBlack ? ColorWhite : ColorBlack);
+  for (Square square = open.pick(); !square.IsInvalid(); square = open.pick()) {
+    if (CanMove(square, nextDisk_)) {
       moves.Set(square);
     }
   }
   return moves;
+}
+
+Bitboard Board::GetOpenSquares(DiskColor color) const {
+  Bitboard occupied = black_ | white_;
+  Bitboard empty = ~occupied;
+  Bitboard open = color == ColorBlack
+                ? (black_.Up() | black_.Down() | black_.Left() | black_.Right()
+                 | black_.LeftUp() | black_.LeftDown() | black_.RightUp() | black_.RightDown()) & empty
+                : (white_.Up() | white_.Down() | white_.Left() | white_.Right()
+                 | white_.LeftUp() | white_.LeftDown() | white_.RightUp() | white_.RightDown()) & empty;
+  return open;
 }
 
 TotalScore Board::GetTotalScore() const {

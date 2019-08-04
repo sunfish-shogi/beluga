@@ -31,11 +31,11 @@ public:
   Square& operator=(const Square&) = default;
   Square& operator=(Square&&) = default;
 
-  bool operator==(const Square& rhs) {
+  bool operator==(const Square& rhs) const {
     return raw_ == rhs.raw_;
   }
 
-  bool operator!=(const Square& rhs) {
+  bool operator!=(const Square& rhs) const {
     return raw_ != rhs.raw_;
   }
 
@@ -80,7 +80,7 @@ public:
   }
 
   bool IsInvalid() const {
-    return raw_ == -1;
+    return (*this) == Invalid();
   }
 
   LPCTSTR ToString() const {
@@ -237,6 +237,15 @@ public:
     return raw_;
   }
 
+  Square pick() {
+    if (raw_ == 0) {
+      return Square::Invalid();
+    }
+    uint64_t mask = raw_ - 1;
+    raw_ &= mask;
+    return Square(Bitboard(raw_ ^ mask).Count());
+  }
+
 private:
 
   uint64_t raw_;
@@ -345,6 +354,10 @@ public:
     white_ ^= mask;
   }
 
+  void SetNextDisk(DiskColor nextDisk) {
+    nextDisk_ = nextDisk;
+  }
+
   bool CanMove(const Square& square) const;
 
   bool IsEnd() const;
@@ -366,6 +379,8 @@ public:
 private:
 
   bool CanMove(const Square& square, DiskColor color) const;
+
+  Bitboard GetOpenSquares(DiskColor color) const;
 
   Bitboard black_;
   Bitboard white_;
