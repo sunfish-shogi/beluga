@@ -410,54 +410,56 @@ Score Searcher::Evaluate(const Board& board) {
   Bitboard outerMask = empty.Up()     | empty.Down()     | empty.Left()    | empty.Right()
                      | empty.LeftUp() | empty.LeftDown() | empty.RightUp() | empty.RightDown();
   Bitboard innerMask = ~outerMask;
-  Bitboard bopen = (black.Up()     | black.Down()     | black.Left()    | black.Right()
-                  | black.LeftUp() | black.LeftDown() | black.RightUp() | black.RightDown()) & empty;
-  Bitboard wopen = (white.Up()     | white.Down()     | white.Left()    | white.Right()
-                  | white.LeftUp() | white.LeftDown() | white.RightUp() | white.RightDown()) & empty;
   int count = occupied.Count();
 
-  const Score DangerX = linear(-800, -100,  count, 64);
+  Bitboard blackMovable = board.GenerateMoves(ColorBlack);
+  Bitboard whiteMovable = board.GenerateMoves(ColorWhite);
+
+  // Danger X
+  const Score DangerX = linear(-800, 0,  count, 64);
   Bitboard emptyCorner = empty & Bitboard::MaskCorner();
   Bitboard dangerXMask = (emptyCorner.LeftUp() | emptyCorner.LeftDown() | emptyCorner.RightUp() | emptyCorner.RightDown());
   score += (black & dangerXMask).Count() * DangerX;
   score -= (white & dangerXMask).Count() * DangerX;
 
-  const Score SafeX = linear(500, 100,  count, 64);
+  // Safe X
+  const Score SafeX = linear(500, 0,  count, 64);
   Bitboard safeXMask = dangerXMask ^ Bitboard::MaskX();
   score += (black & safeXMask).Count() * SafeX;
   score -= (white & safeXMask).Count() * SafeX;
 
-  const Score DangerC = linear(-500, -100,  count, 64);
+  // Danger C
+  const Score DangerC = linear(-500, 0,  count, 64);
   Bitboard emptyA = empty & Bitboard::MaskA();
   Bitboard dangerCMask = (emptyCorner.Left() | emptyCorner.Right() | emptyCorner.Up() | emptyCorner.Down())
                        & (emptyA.Left() | emptyA.Right() | emptyA.Up() | emptyA.Down());
   score += (black & dangerCMask).Count() * DangerC;
   score -= (white & dangerCMask).Count() * DangerC;
 
-  const Score InnerScore1 = linear(-200, 50, count, 64);
+  // Inner (Box)
+  const Score InnerScore1 = linear(-200, 100, count, 64);
   score += (black & innerMask & Bitboard::MaskBox()).Count() * InnerScore1;
   score -= (white & innerMask & Bitboard::MaskBox()).Count() * InnerScore1;
 
-  const Score InnerScore2 = linear(-200, 0, count, 64);
+  // Innner (others)
+  const Score InnerScore2 = linear(-200, 100, count, 64);
   score += (black & innerMask & ~Bitboard::MaskBox()).Count() * InnerScore2;
   score -= (white & innerMask & ~Bitboard::MaskBox()).Count() * InnerScore2;
 
-  const Score OuterScore = linear(-200, -100, count, 64);
+  // Outer
+  const Score OuterScore = linear(-200, 0, count, 64);
   score += (black & outerMask).Count() * OuterScore;
   score -= (white & outerMask).Count() * OuterScore;
 
-  const Score OpenScore = linear(-200, -400, count, 64);
-  score += bopen.Count() * OpenScore;
-  score -= wopen.Count() * OpenScore;
-
-  const Score OpenScore3 = linear(-250, -400, count, 64);
-  constexpr Bitboard openMask3 = Bitboard::MaskInnerSide();
-  score += (bopen & openMask3).Count() * OpenScore3;
-  score -= (wopen & openMask3).Count() * OpenScore3;
-
-  const Score FixedDiskScore = linear(1600, 50, count, 64);
+  // Fixed
+  const Score FixedDiskScore = linear(1000, 0, count, 64);
   score += CountFixedDisk(black) * FixedDiskScore;
   score -= CountFixedDisk(white) * FixedDiskScore;
+
+  // Movable Count
+  const Score MovableCountScore = linear(300, 100, count, 64);
+  score += blackMovable.Count() * MovableCountScore;
+  score -= whiteMovable.Count() * MovableCountScore;
 
   return score;
 }

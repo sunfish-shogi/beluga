@@ -254,10 +254,14 @@ void Board::Pass() {
 }
 
 Bitboard Board::GenerateMoves() const {
+  return GenerateMoves(nextDisk_);
+}
+
+Bitboard Board::GenerateMoves(DiskColor color) const {
   Bitboard moves = Bitboard(0);
-  Bitboard open = GetOpenSquares(nextDisk_ == ColorBlack ? ColorWhite : ColorBlack);
+  Bitboard open = GetOpenSquares(color == ColorBlack ? ColorWhite : ColorBlack);
   for (Square square = open.Pick(); !square.IsInvalid(); square = open.Pick()) {
-    if (CanMove(square, nextDisk_)) {
+    if (CanMove(square, color)) {
       moves.Set(square);
     }
   }

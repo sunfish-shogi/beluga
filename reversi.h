@@ -372,6 +372,8 @@ public:
 
   Bitboard GenerateMoves() const;
 
+  Bitboard GenerateMoves(DiskColor color) const;
+
   TotalScore GetTotalScore() const;
 
   uint64_t GetHash() const;
