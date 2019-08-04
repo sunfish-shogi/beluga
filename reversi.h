@@ -28,22 +28,22 @@ public:
   Square(int raw) noexcept : raw_(raw) {}
   Square(int x, int y) noexcept : raw_(y * 8 + x) {}
 
-  Square& operator=(const Square&) = default;
-  Square& operator=(Square&&) = default;
+  constexpr Square& operator=(const Square&) = default;
+  constexpr Square& operator=(Square&&) = default;
 
-  bool operator==(const Square& rhs) const {
+  constexpr bool operator==(const Square& rhs) const {
     return raw_ == rhs.raw_;
   }
 
-  bool operator!=(const Square& rhs) const {
+  constexpr bool operator!=(const Square& rhs) const {
     return raw_ != rhs.raw_;
   }
 
-  int GetX() const {
+  constexpr int GetX() const {
     return raw_ % 8;
   }
 
-  int GetY() const {
+  constexpr int GetY() const {
     return raw_ / 8;
   }
 
@@ -79,7 +79,7 @@ public:
     return Square(-1);
   }
 
-  bool IsInvalid() const {
+  constexpr bool IsInvalid() const {
     return (*this) == Invalid();
   }
 
@@ -179,35 +179,35 @@ public:
   }
 
   static constexpr Bitboard MaskCol1to7() {
-    return 0b01111111,01111111,01111111,01111111,01111111,01111111,01111111,01111111;
+    return 0b0111111101111111011111110111111101111111011111110111111101111111;
   }
 
   static constexpr Bitboard MaskCol2to8() {
-    return 0b11111110,11111110,11111110,11111110,11111110,11111110,11111110,11111110;
+    return 0b1111111011111110111111101111111011111110111111101111111011111110;
   }
 
   static constexpr Bitboard MaskBox() {
-    return 0b00000000,00000000,00111100,00111100,00111100,00111100,00000000,00000000;
+    return 0b0000000000000000001111000011110000111100001111000000000000000000;
   }
 
   static constexpr Bitboard MaskInnerSide() {
-    return 0b00000000,00111100,01000010,01000010,01000010,01000010,00111100,00000000;
+    return 0b0000000000111100010000100100001001000010010000100011110000000000;
   }
 
   static constexpr Bitboard MaskSide() {
-    return 0b01111110,10000001,10000001,10000001,10000001,10000001,10000001,01111110;
+    return 0b0111111010000001100000011000000110000001100000011000000101111110;
   }
 
   static constexpr Bitboard MaskX() {
-    return 0b00000000,01000010,00000000,00000000,00000000,00000000,01000010,00000000;
+    return 0b0000000001000010000000000000000000000000000000000100001000000000;
   }
 
   static constexpr Bitboard MaskCorner() {
-    return 0b10000001,00000000,00000000,00000000,00000000,00000000,00000000,10000001;
+    return 0b1000000100000000000000000000000000000000000000000000000010000001;
   }
 
   static constexpr Bitboard MaskA() {
-    return 0b00100100,00000000,10000001,00000000,00000000,10000001,00000000,00100100;
+    return 0b0010010000000000100000010000000000000000100000010000000000100100;
   }
 
   constexpr int Count() const {
@@ -237,7 +237,7 @@ public:
     return raw_;
   }
 
-  Square pick() {
+  Square Pick() {
     if (raw_ == 0) {
       return Square::Invalid();
     }

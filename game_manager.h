@@ -96,6 +96,7 @@ public:
     }
   }
 
+  void OnTurn();
   void OnIterate(int depth, const PV& pv, Score score, int nodes);
   void OnFailHigh(int depth, Score score, int nodes);
   void OnFailLow(int depth, Score score, int nodes);

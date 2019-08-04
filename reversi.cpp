@@ -225,13 +225,13 @@ void Board::UndoMove(const Square& square, const Bitboard& mask) {
 
 bool Board::IsEnd() const {
   Bitboard open = GetOpenSquares(ColorWhite);
-  for (Square square = open.pick(); !square.IsInvalid(); square = open.pick()) {
+  for (Square square = open.Pick(); !square.IsInvalid(); square = open.Pick()) {
     if (CanMove(square, ColorBlack)) {
       return false;
     }
   }
   open = GetOpenSquares(ColorBlack);
-  for (Square square = open.pick(); !square.IsInvalid(); square = open.pick()) {
+  for (Square square = open.Pick(); !square.IsInvalid(); square = open.Pick()) {
     if (CanMove(square, ColorWhite)) {
       return false;
     }
@@ -240,9 +240,8 @@ bool Board::IsEnd() const {
 }
 
 bool Board::MustPass() const {
-  // FIXME: 不具合あり？まだ打てるのにパスした。
   Bitboard open = GetOpenSquares(nextDisk_ == ColorBlack ? ColorWhite : ColorBlack);
-  for (Square square = open.pick(); !square.IsInvalid(); square = open.pick()) {
+  for (Square square = open.Pick(); !square.IsInvalid(); square = open.Pick()) {
     if (CanMove(square, nextDisk_)) {
       return false;
     }
@@ -257,7 +256,7 @@ void Board::Pass() {
 Bitboard Board::GenerateMoves() const {
   Bitboard moves = Bitboard(0);
   Bitboard open = GetOpenSquares(nextDisk_ == ColorBlack ? ColorWhite : ColorBlack);
-  for (Square square = open.pick(); !square.IsInvalid(); square = open.pick()) {
+  for (Square square = open.Pick(); !square.IsInvalid(); square = open.Pick()) {
     if (CanMove(square, nextDisk_)) {
       moves.Set(square);
     }

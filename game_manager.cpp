@@ -59,6 +59,8 @@ void GameManager::GameLoop() {
     handler_->OnNewGame();
 
     while (!board_.load().IsEnd()) {
+      OnTurn();
+
       if (board_.load().GetNextDisk() == playerColor) {
         PlayerTurn();
       } else {
@@ -88,11 +90,10 @@ void GameManager::PlayerTurn() {
 
   auto board = board_.load();
 
-  // pass
-  if (board.GenerateMoves() == Bitboard(0)) {
+  if (board.MustPass()) {
+    // pass
     board.Pass();
     board_ = board;
-
     handler_->OnPass();
 
     return;
@@ -141,7 +142,7 @@ void GameManager::ComTurn() {
   if (board.MustPass()) {
     // pass
     board.Pass();
-    board_.store(board);
+    board_ = board;
     handler_->OnPass();
     return;
   }
@@ -164,6 +165,15 @@ void GameManager::ComTurn() {
 
   handler_->OnSearchScore();
   handler_->OnMove();
+}
+
+void GameManager::OnTurn() {
+  Bitboard moves = board_.load().GenerateMoves();
+  handler_->OnLog(L"Moves: ");
+  for (Square square = moves.Pick(); !square.IsInvalid(); square = moves.Pick()) {
+    handler_->OnLog(square.ToString());
+  }
+  handler_->OnLog(L"\r\n");
 }
 
 void GameManager::OnIterate(int depth, const PV& pv, Score score, int nodes) {
