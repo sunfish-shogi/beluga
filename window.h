@@ -58,7 +58,7 @@ private:
   };
 
   static const std::unordered_map<State, std::vector<Button>> StateButtonMap;
-  static const std::unordered_map<Button, LPCWSTR> ButtonTextMap;
+  static const std::unordered_map<Button, const char*> ButtonTextMap;
   static const std::unordered_map<Button, int> ButtonIDMap;
 
   void OnCreate(HWND hwnd, LPARAM lp);

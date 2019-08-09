@@ -1,4 +1,3 @@
-#include "stdafx.h"
 #include "reversi.h"
 #include "zobrist.h"
 
@@ -91,15 +90,15 @@ const bool DirWall[8][64] = {
   },
 };
 
-extern LPCTSTR SquareStrings[64] = {
-  L"a1", L"b1", L"c1", L"d1", L"e1", L"f1", L"g1", L"h1",
-  L"a2", L"b2", L"c2", L"d2", L"e2", L"f2", L"g2", L"h2",
-  L"a3", L"b3", L"c3", L"d3", L"e3", L"f3", L"g3", L"h3",
-  L"a4", L"b4", L"c4", L"d4", L"e4", L"f4", L"g4", L"h4",
-  L"a5", L"b5", L"c5", L"d5", L"e5", L"f5", L"g5", L"h5",
-  L"a6", L"b6", L"c6", L"d6", L"e6", L"f6", L"g6", L"h6",
-  L"a7", L"b7", L"c7", L"d7", L"e7", L"f7", L"g7", L"h7",
-  L"a8", L"b8", L"c8", L"d8", L"e8", L"f8", L"g8", L"h8",
+extern const char* SquareStrings[64] = {
+  "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
+  "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
+  "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
+  "a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",
+  "a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5",
+  "a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",
+  "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
+  "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
 };
 
 bool Board::CanMove(const Square& square) const {

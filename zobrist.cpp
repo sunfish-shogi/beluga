@@ -1,4 +1,3 @@
-#include "stdafx.h"
 #include "zobrist.h"
 
 const uint64_t ZobristTable1[16] = {

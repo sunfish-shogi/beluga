@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include <windows.h>
 #include "game_manager.h"
 #include <chrono>
 #include <vector>
@@ -153,8 +153,8 @@ void GameManager::ComTurn() {
 
   if (stop_) { return; }
 
-  TCHAR buf[1024];
-  wsprintf(buf, L"%d milliseconds\r\n", (int)std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count());
+  char buf[1024];
+  wsprintf(buf, "%d milliseconds\r\n", (int)std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count());
   handler_->OnLog(buf);
 
   board.DoMove(searchResult.move);
@@ -169,34 +169,34 @@ void GameManager::ComTurn() {
 
 void GameManager::OnTurn() {
   Bitboard moves = board_.load().GenerateMoves();
-  handler_->OnLog(L"Moves: ");
+  handler_->OnLog("Moves: ");
   for (Square square = moves.Pick(); !square.IsInvalid(); square = moves.Pick()) {
     handler_->OnLog(square.ToString());
   }
-  handler_->OnLog(L"\r\n");
+  handler_->OnLog("\r\n");
 }
 
 void GameManager::OnIterate(int depth, const PV& pv, Score score, int nodes) {
-  TCHAR buf[1024];
-  wsprintf(buf, L"Depth %2d: %8d: %s: %d\r\n", depth, nodes, pv.ToString(), score);
+  char buf[1024];
+  wsprintf(buf, "Depth %2d: %8d: %s: %d\r\n", depth, nodes, pv.ToString(), score);
   handler_->OnLog(buf);
 }
 
 void GameManager::OnFailHigh(int depth, Score score, int nodes) {
-  TCHAR buf[1024];
-  wsprintf(buf, L"Depth %2d: %8d: fail-high: %d\r\n", depth, nodes, score);
+  char buf[1024];
+  wsprintf(buf, "Depth %2d: %8d: fail-high: %d\r\n", depth, nodes, score);
   handler_->OnLog(buf);
 }
 
 void GameManager::OnFailLow(int depth, Score score, int nodes) {
-  TCHAR buf[1024];
-  wsprintf(buf, L"Depth %2d: %8d: fail-low: %d\r\n", depth, nodes, score);
+  char buf[1024];
+  wsprintf(buf, "Depth %2d: %8d: fail-low: %d\r\n", depth, nodes, score);
   handler_->OnLog(buf);
 }
 
 void GameManager::OnEnding(const PV& pv, Score score, int nodes) {
-  TCHAR buf[1024];
-  wsprintf(buf, L"Ending: %8d: %s: %d\r\n", nodes, pv.ToString(), score);
+  char buf[1024];
+  wsprintf(buf, "Ending: %8d: %s: %d\r\n", nodes, pv.ToString(), score);
   handler_->OnLog(buf);
 }
 

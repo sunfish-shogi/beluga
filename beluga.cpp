@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include <windows.h>
 #include "window.h"
 
 beluga::MainWindow mainWindow;

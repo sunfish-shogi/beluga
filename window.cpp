@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include <windows.h>
 #include "resource.h"
 #include "window.h"
 #include <sstream>
@@ -80,18 +80,18 @@ const std::unordered_map<MainWindow::State, std::vector<MainWindow::Button>> Mai
   { StateDuringGame       , { ButtonBack } },
 };
 
-const std::unordered_map<MainWindow::Button, LPCWSTR> MainWindow::ButtonTextMap = {
-  { ButtonFree,      L"Free" },
-  { ButtonTournament,L"Tournament" },
-  { ButtonLevel1,    L"Level 1" },
-  { ButtonLevel2,    L"Level 2" },
-  { ButtonLevel3,    L"Level 3" },
-  { ButtonLevel4,    L"Level 4" },
-  { ButtonLevel5,    L"Level 5" },
-  { ButtonBlack,     L"Black" },
-  { ButtonWhite,     L"White" },
-  { ButtonRandom,    L"Random" },
-  { ButtonBack,      L"Back" },
+const std::unordered_map<MainWindow::Button, const char*> MainWindow::ButtonTextMap = {
+  { ButtonFree,      "Free" },
+  { ButtonTournament,"Tournament" },
+  { ButtonLevel1,    "Level 1" },
+  { ButtonLevel2,    "Level 2" },
+  { ButtonLevel3,    "Level 3" },
+  { ButtonLevel4,    "Level 4" },
+  { ButtonLevel5,    "Level 5" },
+  { ButtonBlack,     "Black" },
+  { ButtonWhite,     "White" },
+  { ButtonRandom,    "Random" },
+  { ButtonBack,      "Back" },
 };
 
 std::mutex mainThreadQueueMutex;
@@ -107,14 +107,14 @@ HWND MainWindow::Create(HINSTANCE hInstance, WNDPROC wndProc) {
   winc.hCursor = LoadCursor(NULL, IDC_ARROW);
   winc.hbrBackground = (HBRUSH)GetStockObject(LTGRAY_BRUSH);
   winc.lpszMenuName = NULL;
-  winc.lpszClassName = L"MainWindow";
+  winc.lpszClassName = "MainWindow";
 
   if (!RegisterClass(&winc)) {
     return NULL;
   }
 
   return CreateWindow(
-    L"MainWindow", L"Beluga",
+    "MainWindow", "Beluga",
     WS_OVERLAPPED | WS_SYSMENU | WS_MINIMIZEBOX | WS_VISIBLE,
     CW_USEDEFAULT, CW_USEDEFAULT,
     0, 0,
@@ -187,26 +187,26 @@ void MainWindow::OnCreate(HWND hwnd, LPARAM lp) {
   }
   SetWindowPos(mainWindow_, HWND_TOP, 0, 0, width, height, SWP_SHOWWINDOW | SWP_NOMOVE);
 
-  bmpBoard_ = LoadImageAsDC(L"board.bmp");
-  bmpDisk_ = LoadImageAsDC(L"disk.bmp");
-  bmpFace_ = LoadImageAsDC(L"face.bmp");
+  bmpBoard_ = LoadImageAsDC("board.bmp");
+  bmpDisk_ = LoadImageAsDC("disk.bmp");
+  bmpFace_ = LoadImageAsDC("face.bmp");
 
   hButtonFont_ = CreateFont(
     ButtonFontSize, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
     ANSI_CHARSET, OUT_DEFAULT_PRECIS,
     CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
-    VARIABLE_PITCH | FF_ROMAN, L"Cambria");
+    VARIABLE_PITCH | FF_ROMAN, "Cambria");
   objList_.push_back(hButtonFont_);
 
   hMessageFont_ = CreateFont(
     MessageFontSize, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
     ANSI_CHARSET, OUT_DEFAULT_PRECIS,
     CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
-    VARIABLE_PITCH | FF_ROMAN, L"Cambria");
+    VARIABLE_PITCH | FF_ROMAN, "Cambria");
   objList_.push_back(hMessageFont_);
 
   msgText_ = CreateWindow(
-    L"STATIC", L"",
+    "STATIC", "",
     WS_CHILD | WS_VISIBLE | SS_LEFT,
     MessageTextX, MessageTextY, MessageTextWidth, MessageTextHeight,
     hwnd, NULL, hInstance_, NULL
@@ -217,11 +217,11 @@ void MainWindow::OnCreate(HWND hwnd, LPARAM lp) {
     MessageFontSize, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
     ANSI_CHARSET, OUT_DEFAULT_PRECIS,
     CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
-    VARIABLE_PITCH | FF_ROMAN, L"Courier New");
+    VARIABLE_PITCH | FF_ROMAN, "Courier New");
   objList_.push_back(hEditFont_);
 
   kifuText_ = CreateWindow(
-    L"EDIT", L"",
+    "EDIT", "",
     WS_CHILD | WS_VISIBLE | ES_LEFT |
     ES_AUTOHSCROLL,
     KifuTextX, KifuTextY, KifuTextWidth, KifuTextHeight,
@@ -230,7 +230,7 @@ void MainWindow::OnCreate(HWND hwnd, LPARAM lp) {
   SendMessage(kifuText_, WM_SETFONT, (WPARAM)hEditFont_, TRUE);
 
   evalText_ = CreateWindow(
-    L"EDIT", L"",
+    "EDIT", "",
     WS_CHILD | WS_VISIBLE | ES_LEFT |
     ES_AUTOHSCROLL,
     EvalTextX, EvalTextY, EvalTextWidth, EvalTextHeight,
@@ -240,7 +240,7 @@ void MainWindow::OnCreate(HWND hwnd, LPARAM lp) {
 
 #if DEBUG_TEXT
   debugText_ = CreateWindow(
-    L"EDIT", L"",
+    "EDIT", "",
     WS_CHILD | WS_VISIBLE | ES_LEFT | ES_MULTILINE |
     WS_HSCROLL | WS_VSCROLL | ES_AUTOHSCROLL | ES_AUTOVSCROLL,
     DebugTextX, DebugTextY, DebugTextWidth, DebugTextHeight,
@@ -410,7 +410,7 @@ void MainWindow::OnChangeState() {
     }
 
     HWND hwnd = CreateWindow(
-      L"BUTTON", ButtonTextMap.at(button),
+      "BUTTON", ButtonTextMap.at(button),
       WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
       x, y, MenuButtonWidth, MenuButtonHeight,
       mainWindow_, (HMENU)button,
@@ -519,8 +519,8 @@ void PushMainThreadJob(T&& func) {
 
 void MainWindow::OnNewGame() {
   PushMainThreadJob([this]() {
-    SetWindowText(kifuText_, L"");
-    SetWindowText(evalText_, L"");
+    SetWindowText(kifuText_, "");
+    SetWindowText(evalText_, "");
   });
 }
 
@@ -528,8 +528,8 @@ void MainWindow::OnPlayerTurn() {
   ComLevel level = gameManager_.GetComLevel();
   PushMainThreadJob([this, level]() {
     SendMessage(mainWindow_, WM_BELUGA_REPAINT, 0, 0);
-    TCHAR buf[1024];
-    wsprintf(buf, L"Level %d... Your Turn", level);
+    char buf[1024];
+    wsprintf(buf, "Level %d... Your Turn", level);
     SetWindowText(msgText_, buf);
   });
 }
@@ -538,8 +538,8 @@ void MainWindow::OnComTurn() {
   ComLevel level = gameManager_.GetComLevel();
   PushMainThreadJob([this, level]() {
     SendMessage(mainWindow_, WM_BELUGA_REPAINT, 0, 0);
-    TCHAR buf[1024];
-    wsprintf(buf, L"Level %d... Beluga's Turn", level);
+    char buf[1024];
+    wsprintf(buf, "Level %d... Beluga's Turn", level);
     SetWindowText(msgText_, buf);
   });
 
@@ -549,7 +549,7 @@ void MainWindow::OnComTurn() {
 void MainWindow::OnMove() {
   Square move = gameManager_.GetLastMove();
   PushMainThreadJob([this, move]() {
-    TCHAR buf[1024];
+    char buf[1024];
     GetWindowText(kifuText_, buf, sizeof(buf) / sizeof(buf[0]));
     lstrcpy(buf + lstrlen(buf), move.ToString());
     SetWindowText(kifuText_, buf);
@@ -559,8 +559,8 @@ void MainWindow::OnMove() {
 void MainWindow::OnSearchScore() {
   SearchResult searchResult = gameManager_.GetSearchResult();
   PushMainThreadJob([this, searchResult]() {
-    TCHAR buf[1024];
-    wsprintf(buf, L"%d ", searchResult.score / ScoreScale);
+    char buf[1024];
+    wsprintf(buf, "%d ", searchResult.score / ScoreScale);
     LRESULT len = SendMessage(evalText_, WM_GETTEXTLENGTH, 0, 0);
     SendMessage(evalText_, EM_SETSEL, (WPARAM)len, (LPARAM)len);
     SendMessage(evalText_, EM_REPLACESEL, (WPARAM)false, (LPARAM)buf);
@@ -577,13 +577,13 @@ void MainWindow::OnResult() {
   PushMainThreadJob([this, board, playerColor, level]() {
     SendMessage(mainWindow_, WM_BELUGA_REPAINT, 0, 0);
     TotalScore totalScore = board.GetTotalScore();
-    TCHAR buf[1024];
+    char buf[1024];
     if (totalScore.winner == playerColor) {
-      wsprintf(buf, L"Level %d... You win!", level);
+      wsprintf(buf, "Level %d... You win!", level);
     } else if (totalScore.winner != Winner::Draw) {
-      wsprintf(buf, L"Level %d... You lose.", level);
+      wsprintf(buf, "Level %d... You lose.", level);
     } else {
-      wsprintf(buf, L"Level %d... Draw", level);
+      wsprintf(buf, "Level %d... Draw", level);
     }
     SetWindowText(msgText_, buf);
   });

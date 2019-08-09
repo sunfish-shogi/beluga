@@ -32,12 +32,12 @@ struct PV {
     length = child.length + 1;
   }
 
-  LPCTSTR ToString() const {
-    thread_local TCHAR buf[128];
+  const char* ToString() const {
+    thread_local char buf[128];
     for (int i = 0; i < length; i++) {
-      memcpy(&buf[i * 2], moves[i].ToString(), sizeof(TCHAR) * 2);
+      memcpy(&buf[i * 2], moves[i].ToString(), sizeof(char) * 2);
     }
-    buf[length * 2] = L'\0';
+    buf[length * 2] = '\0';
     return buf;
   }
 };

@@ -17,7 +17,7 @@ enum Direction : int {
 
 extern const int DirDelta[8];
 extern const bool DirWall[8][64];
-extern LPCTSTR SquareStrings[64];
+extern const char* SquareStrings[64];
 
 class Square {
 public:
@@ -83,9 +83,9 @@ public:
     return (*this) == Invalid();
   }
 
-  LPCTSTR ToString() const {
+  const char* ToString() const {
     if (raw_ < 0 || raw_ > 63) {
-      return L"NA";
+      return "NA";
     }
     return SquareStrings[raw_];
   }
