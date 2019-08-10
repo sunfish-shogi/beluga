@@ -1,5 +1,4 @@
-#include "reversi.h"
-#include "search.h"
+#include "../search.h"
 #include <thread>
 #include <atomic>
 #include <random>

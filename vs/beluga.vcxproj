@@ -147,26 +147,26 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\reversi.h" />
+    <ClInclude Include="..\search.h" />
+    <ClInclude Include="..\zobrist.h" />
     <ClInclude Include="game_manager.h" />
-    <ClInclude Include="reversi.h" />
-    <ClInclude Include="search.h" />
     <ClInclude Include="window.h" />
     <ClInclude Include="Resource.h" />
-    <ClInclude Include="zobrist.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="beluga.cpp" />
-    <ClCompile Include="game_manager.cpp" />
-    <ClCompile Include="reversi.cpp" />
-    <ClCompile Include="search.cpp" />
-    <ClCompile Include="window.cpp" />
-    <ClCompile Include="zobrist.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="beluga.rc" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="beluga.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\reversi.cpp" />
+    <ClCompile Include="..\search.cpp" />
+    <ClCompile Include="..\zobrist.cpp" />
+    <ClCompile Include="beluga.cpp" />
+    <ClCompile Include="game_manager.cpp" />
+    <ClCompile Include="window.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
