@@ -3,6 +3,8 @@
 #include "reversi.h"
 #include <atomic>
 #include <random>
+#include <memory>
+#include <cstring>
 
 namespace beluga {
 

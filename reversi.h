@@ -28,8 +28,8 @@ public:
   Square(int raw) noexcept : raw_(raw) {}
   Square(int x, int y) noexcept : raw_(y * 8 + x) {}
 
-  constexpr Square& operator=(const Square&) = default;
-  constexpr Square& operator=(Square&&) = default;
+  Square& operator=(const Square&) = default;
+  Square& operator=(Square&&) = default;
 
   constexpr bool operator==(const Square& rhs) const {
     return raw_ == rhs.raw_;
@@ -210,7 +210,7 @@ public:
     return 0b0010010000000000100000010000000000000000100000010000000000100100;
   }
 
-  constexpr int Count() const {
+  int Count() const {
     uint64_t x = raw_;
     x = x - ((x >> 1) & 0x5555555555555555llu);
     x = (x & 0x3333333333333333llu) + ((x >> 2) & 0x3333333333333333llu);
