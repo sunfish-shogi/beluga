@@ -22,11 +22,13 @@ extern const char* SquareStrings[64];
 class Square {
 public:
 
+  using RawType = int8_t;
+
   Square() noexcept = default;
   Square(const Square& src) noexcept = default;
   Square(Square&& src) noexcept = default;
-  Square(int raw) noexcept : raw_(raw) {}
-  Square(int x, int y) noexcept : raw_(y * 8 + x) {}
+  Square(RawType raw) noexcept : raw_(raw) {}
+  Square(RawType x, RawType y) noexcept : raw_(y * 8 + x) {}
 
   Square& operator=(const Square&) = default;
   Square& operator=(Square&&) = default;
@@ -39,11 +41,11 @@ public:
     return raw_ != rhs.raw_;
   }
 
-  constexpr int GetX() const {
+  constexpr RawType GetX() const {
     return raw_ % 8;
   }
 
-  constexpr int GetY() const {
+  constexpr RawType GetY() const {
     return raw_ / 8;
   }
 
@@ -92,7 +94,7 @@ public:
 
 private:
 
-  int raw_;
+  RawType raw_;
 
 };
 

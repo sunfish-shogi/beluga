@@ -1,24 +1,13 @@
 #pragma once
 
 #include "reversi.h"
+#include "evaluate.h"
 #include <atomic>
 #include <random>
 #include <memory>
 #include <cstring>
 
 namespace beluga {
-
-using Score = int;
-constexpr int ScoreScale = 100;
-constexpr int ScoreInfinity = 100 * ScoreScale;
-
-inline Score ScoreMax(Score a, Score b) {
-  return a > b ? a : b;
-}
-
-inline Score ScoreMin(Score a, Score b) {
-  return a < b ? a : b;
-}
 
 struct PV {
   Square moves[60];
@@ -65,7 +54,7 @@ public:
   constexpr static int TTSize        = 0x100000;
   constexpr static int TTMask        = 0x0fffff;
 
-  Searcher(SearchHandler* handler = nullptr);
+  Searcher(const std::shared_ptr<Evaluator>& eval, SearchHandler* handler = nullptr);
 
   SearchResult Search(const Board& board, int depth, int endingDepth);
 
@@ -122,12 +111,9 @@ private:
 
   void GenerateMoves(Tree& tree, Square ttMove, int depth, Score alpha, Score beta);
 
-  Score Evaluate(const Board& board);
-
-  int CountFixedDisk(const Bitboard& bitboard);
-
   std::atomic<bool> stop_;
   std::mt19937 random_;
+  const std::shared_ptr<Evaluator> eval_;
   SearchHandler* handler_;
   std::unique_ptr<TTElement[]> tt_;
 

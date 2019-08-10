@@ -9,8 +9,8 @@
 
 namespace beluga {
 
-Searcher::Searcher(SearchHandler* handler)
-  : handler_(handler)
+Searcher::Searcher(const std::shared_ptr<Evaluator>& eval, SearchHandler* handler)
+  : eval_(eval), handler_(handler)
 #if TT
   , tt_(new TTElement[TTSize])
 #endif
@@ -24,7 +24,7 @@ Searcher::Searcher(SearchHandler* handler)
 
 SearchResult Searcher::Search(const Board& board, int maxDepth, int endingDepth) {
   if (board.MustPass()) {
-    return { Square::Invalid(), 0 };
+    return { Square::Invalid(), 0 , false };
   }
 
   Tree tree;
@@ -198,7 +198,7 @@ Score Searcher::Search(Tree& tree, int depth, Score alpha, Score beta, bool pass
   }
 
   if (depth < DepthOnePly) {
-    Score score = Evaluate(tree.board);
+    Score score = eval_->Evaluate(tree.board);
     return tree.board.GetNextDisk() == ColorBlack ? score : -score;
   }
 
@@ -393,120 +393,6 @@ void Searcher::GenerateMoves(Tree& tree, Square ttMove, int depth, Score alpha, 
   std::sort(node.moves, node.moves + node.nmoves, [](const Move& lhs, const Move& rhs) {
     return lhs.score > rhs.score;
   });
-}
-
-inline int linear(int begin, int end, int count, int maxCount) {
-  return begin + (end - begin) * count / maxCount;
-}
-
-Score Searcher::Evaluate(const Board& board) {
-  Score score = 0;
-  Bitboard black = board.GetBlackBoard();
-  Bitboard white = board.GetWhiteBoard();
-
-  Bitboard occupied = black | white;
-  Bitboard empty = ~occupied;
-  Bitboard outerMask = empty.Up()     | empty.Down()     | empty.Left()    | empty.Right()
-                     | empty.LeftUp() | empty.LeftDown() | empty.RightUp() | empty.RightDown();
-  Bitboard innerMask = ~outerMask;
-  int count = occupied.Count();
-
-  Bitboard blackMovable = board.GenerateMoves(ColorBlack);
-  Bitboard whiteMovable = board.GenerateMoves(ColorWhite);
-
-  // Danger X
-  const Score DangerX = linear(-800, 0,  count, 64);
-  Bitboard emptyCorner = empty & Bitboard::MaskCorner();
-  Bitboard dangerXMask = (emptyCorner.LeftUp() | emptyCorner.LeftDown() | emptyCorner.RightUp() | emptyCorner.RightDown());
-  score += (black & dangerXMask).Count() * DangerX;
-  score -= (white & dangerXMask).Count() * DangerX;
-
-  // Safe X
-  const Score SafeX = linear(500, 0,  count, 64);
-  Bitboard safeXMask = dangerXMask ^ Bitboard::MaskX();
-  score += (black & safeXMask).Count() * SafeX;
-  score -= (white & safeXMask).Count() * SafeX;
-
-  // Danger C
-  const Score DangerC = linear(-500, 0,  count, 64);
-  Bitboard emptyA = empty & Bitboard::MaskA();
-  Bitboard dangerCMask = (emptyCorner.Left() | emptyCorner.Right() | emptyCorner.Up() | emptyCorner.Down())
-                       & (emptyA.Left() | emptyA.Right() | emptyA.Up() | emptyA.Down());
-  score += (black & dangerCMask).Count() * DangerC;
-  score -= (white & dangerCMask).Count() * DangerC;
-
-  // Inner (Box)
-  const Score InnerScore1 = linear(-200, 100, count, 64);
-  score += (black & innerMask & Bitboard::MaskBox()).Count() * InnerScore1;
-  score -= (white & innerMask & Bitboard::MaskBox()).Count() * InnerScore1;
-
-  // Innner (others)
-  const Score InnerScore2 = linear(-200, 100, count, 64);
-  score += (black & innerMask & ~Bitboard::MaskBox()).Count() * InnerScore2;
-  score -= (white & innerMask & ~Bitboard::MaskBox()).Count() * InnerScore2;
-
-  // Outer
-  const Score OuterScore = linear(-200, 0, count, 64);
-  score += (black & outerMask).Count() * OuterScore;
-  score -= (white & outerMask).Count() * OuterScore;
-
-  // Fixed
-  const Score FixedDiskScore = linear(1000, 0, count, 64);
-  score += CountFixedDisk(black) * FixedDiskScore;
-  score -= CountFixedDisk(white) * FixedDiskScore;
-
-  // Movable Count
-  const Score MovableCountScore = linear(300, 100, count, 64);
-  score += blackMovable.Count() * MovableCountScore;
-  score -= whiteMovable.Count() * MovableCountScore;
-
-  return score;
-}
-
-int Searcher::CountFixedDisk(const Bitboard& bitboard) {
-  Bitboard fixed = 0;
-
-  for (int x = 0; x <= 6; x++) {
-    if (!bitboard.Get(Square(x, 0))) { break; }
-    fixed.Set(Square(x, 0));
-  }
-
-  for (int x = 0; x <= 6; x++) {
-    if (!bitboard.Get(Square(x, 7))) { break; }
-    fixed.Set(Square(x, 7));
-  }
-
-  for (int x = 7; x >= 1; x--) {
-    if (!bitboard.Get(Square(x, 0))) { break; }
-    fixed.Set(Square(x, 0));
-  }
-
-  for (int x = 7; x >= 1; x--) {
-    if (!bitboard.Get(Square(x, 7))) { break; }
-    fixed.Set(Square(x, 7));
-  }
-
-  for (int y = 0; y <= 6; y++) {
-    if (!bitboard.Get(Square(0, y))) { break; }
-    fixed.Set(Square(0, y));
-  }
-
-  for (int y = 0; y <= 6; y++) {
-    if (!bitboard.Get(Square(7, y))) { break; }
-    fixed.Set(Square(7, y));
-  }
-
-  for (int y = 7; y >= 1; y--) {
-    if (!bitboard.Get(Square(0, y))) { break; }
-    fixed.Set(Square(0, y));
-  }
-
-  for (int y = 7; y >= 1; y--) {
-    if (!bitboard.Get(Square(7, y))) { break; }
-    fixed.Set(Square(7, y));
-  }
-
-  return fixed.Count();
 }
 
 } // namespace beluga

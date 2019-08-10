@@ -48,9 +48,16 @@ class GameManager : public SearchHandler {
 public:
 
   GameManager(GameManagerHandler* handler)
-    : searcher_(this),
-      random_(static_cast<unsigned>(time(nullptr))),
-      handler_(handler) {}
+    : handler_(handler),
+      eval_(new Evaluator),
+      searcher_(eval_, this),
+      random_(static_cast<unsigned>(time(nullptr))) {
+    auto err = eval_->LoadParam();
+    if (err != nullptr) {
+      MessageBox(NULL, err, "beluga", MB_OK | MB_ICONERROR);
+      ExitProcess(1);
+    }
+  }
 
   void Start(const GameSetting& setting);
 
@@ -110,6 +117,7 @@ private:
   void ComTurn();
 
   GameManagerHandler* handler_;
+  std::shared_ptr<Evaluator> eval_;
   Searcher searcher_;
   GameSetting setting_;
   int searchDepth_;
