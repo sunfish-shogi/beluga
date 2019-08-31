@@ -2,32 +2,27 @@
 #include <list>
 #include <iostream>
 #include <random>
-#include <set>
 #include <cmath>
 
 using namespace beluga;
 
 std::mt19937 r(static_cast<unsigned>(time(nullptr)));
 
-void LearnBatch(std::shared_ptr<Evaluator> eval, int sampleSize, std::set<int> targetCounts, int batchCount);
+void Learn(std::shared_ptr<Evaluator> eval, int gameCount, int depth, int endingDepth, int updateCount);
 
 int main(int, const char**, const char**) {
   std::shared_ptr<Evaluator> eval(new Evaluator);
 
-  LearnBatch(eval, 10000, std::set<int>{ 54, 55 }, 1024);
-  LearnBatch(eval, 10000, std::set<int>{ 50, 51, 54, 55 }, 1024);
-  LearnBatch(eval, 10000, std::set<int>{ 45, 46, 50, 51, 54, 55 }, 1024);
-  LearnBatch(eval, 10000, std::set<int>{ 40, 41, 45, 46, 50, 51, 54, 55 }, 1024);
-  LearnBatch(eval, 10000, std::set<int>{ 35, 36, 40, 41, 45, 46, 50, 51, 54, 55 }, 1024);
-  LearnBatch(eval, 10000, std::set<int>{ 30, 31, 35, 36, 40, 41, 45, 46, 50, 51, 54, 55 }, 1024);
-  LearnBatch(eval, 10000, std::set<int>{ 25, 26, 30, 31, 35, 36, 40, 41, 45, 46, 50, 51, 54, 55 }, 1024);
-  LearnBatch(eval, 10000, std::set<int>{ 20, 21, 25, 26, 30, 31, 35, 36, 40, 41, 45, 46, 50, 51, 54, 55 }, 1024);
-  LearnBatch(eval, 10000, std::set<int>{ 15, 16, 20, 21, 25, 26, 30, 31, 35, 36, 40, 41, 45, 46, 50, 51, 54, 55 }, 1024);
-  LearnBatch(eval, 10000, std::set<int>{ 15, 16, 20, 21, 25, 26, 30, 31, 35, 36, 40, 41, 45, 46, 50, 51, 54, 55 }, 512);
-  LearnBatch(eval, 10000, std::set<int>{ 15, 16, 20, 21, 25, 26, 30, 31, 35, 36, 40, 41, 45, 46, 50, 51, 54, 55 }, 256);
-  LearnBatch(eval, 10000, std::set<int>{ 15, 16, 20, 21, 25, 26, 30, 31, 35, 36, 40, 41, 45, 46, 50, 51, 54, 55 }, 128);
-  LearnBatch(eval, 10000, std::set<int>{ 15, 16, 20, 21, 25, 26, 30, 31, 35, 36, 40, 41, 45, 46, 50, 51, 54, 55 }, 64);
-  LearnBatch(eval, 10000, std::set<int>{ 15, 16, 20, 21, 25, 26, 30, 31, 35, 36, 40, 41, 45, 46, 50, 51, 54, 55 }, 32);
+  auto err = eval->LoadParam();
+  if (err != nullptr) {
+    std::cerr << err << std::endl;
+    std::cerr << "eval.bin has not loaded, and initialized by zero" << std::endl;
+    eval->InitZero();
+  }
+
+  for (int i = 0; i < 10; i++) {
+    Learn(eval, 100000, 3, 10, 256);
+  }
 
   return 0;
 }
@@ -37,18 +32,20 @@ struct Sample {
   Score score;
 };
 
-void LearnBatch(std::shared_ptr<Evaluator> eval, int sampleSize, std::set<int> targetCounts, int batchCount) {
-  std::cout << "begin LearnBatch" << std::endl;
-  std::cout << "sampleSize: " << sampleSize << std::endl;
-  std::cout << "targets   : " << targetCounts.size() << std::endl;
-  std::cout << "batchCount: " << batchCount << std::endl;
+void Learn(std::shared_ptr<Evaluator> eval, int gameCount, int depth, int endingDepth, int updateCount) {
+  std::cout << "begin Learn" << std::endl;
+  std::cout << "gameCount  : " << gameCount << std::endl;
+  std::cout << "updateCount: " << updateCount << std::endl;
 
   // generate samples
   std::list<Sample> samples;
 
-  std::cout << "generating samples..." << std::flush;
-  for (int i = 0; i < sampleSize; i++) {
+  Searcher searcher(eval);
+  for (int i = 0; i < gameCount; i++) {
+    std::cout << "\rgenerating samples...(" << (i + 1) << "/" << gameCount << ")" << std::flush;
+
     Board board = Board::GetNormalInitBoard();
+    std::list<Board> boards;
 
     while (!board.IsEnd()) {
       if (board.MustPass()) {
@@ -57,39 +54,35 @@ void LearnBatch(std::shared_ptr<Evaluator> eval, int sampleSize, std::set<int> t
       }
 
       auto count = (board.GetBlackBoard() | board.GetWhiteBoard()).Count();
-      if (targetCounts.count(count) != 0) {
-        samples.push_back({ board, 0 });
+      if (12 <= count && count < 64 - endingDepth) {
+        boards.push_back(board);
       }
 
-      auto moves = board.GenerateMoves();
-      std::uniform_int_distribution<int32_t> d(0, moves.Count() - 1);
-      Square move;
-      for (auto index = d(r); index >= 0; index--) {
-        move = moves.Pick();
+      if (count < 12 || count % 7 == 0) {
+        auto moves = board.GenerateMoves();
+        std::uniform_int_distribution<int32_t> d(0, moves.Count() - 1); 
+        Square move; 
+        for (auto index = d(r); index >= 0; index--) { 
+          move = moves.Pick();
+        }
+        board.DoMove(move);
+      } else {
+        auto searchResult = searcher.Search(board, depth, endingDepth);
+        board.DoMove(searchResult.move);
       }
+    }
 
-      board.DoMove(move);
+    Score score = (board.GetBlackBoard().Count() - board.GetWhiteBoard().Count()) * ScoreScale;
+    for (auto b : boards) {
+      samples.push_back({ b, score });
     }
   }
-  std::cout << "done" << std::endl;
-
-  // evaluate
-  std::cout << "evaluating..." << std::flush;
-  Searcher searcher(eval);
-  for (auto& sample : samples) {
-    auto count = (sample.board.GetBlackBoard() | sample.board.GetWhiteBoard()).Count();
-    auto searchResult = searcher.Search(sample.board, 5, 12);
-    sample.score = sample.board.GetNextDisk() == ColorBlack
-                 ? searchResult.score
-                 : -searchResult.score;
-    std::cout << "." << std::flush;
-  }
-  std::cout << "done" << std::endl;
+  std::cout << "\rgenerating samples...done                 " << std::endl;
 
   // adjust
   std::cout << "adjusting..." << std::flush;
   std::uniform_int_distribution<Score> s(0, 1);
-  for (int bi = 0; bi < batchCount; bi++) {
+  for (int bi = 0; bi < updateCount; bi++) {
     float lossSum = 0.0f;
     int lossCount = 0;
     Gradient gradient;

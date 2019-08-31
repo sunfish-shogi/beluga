@@ -26,6 +26,10 @@ struct FeatureParameters {
   using Type = T;
 
   FeatureParameters() {
+    InitZero();
+  }
+
+  void InitZero() {
     memset(reinterpret_cast<char*>(this), 0, sizeof(*this));
   }
 
