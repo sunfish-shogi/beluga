@@ -1,5 +1,6 @@
 #include "search.h"
 #include <algorithm>
+#include <ctime>
 
 #define ROOT_MOVE_SHUFFLE 1
 #define TT                1
@@ -10,7 +11,7 @@
 namespace beluga {
 
 Searcher::Searcher(const std::shared_ptr<Evaluator>& eval, SearchHandler* handler)
-  : eval_(eval), handler_(handler)
+  : random_(time(nullptr)), eval_(eval), handler_(handler)
 #if TT
   , tt_(new TTElement[TTSize])
 #endif
