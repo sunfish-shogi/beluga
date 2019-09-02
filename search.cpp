@@ -11,7 +11,7 @@
 namespace beluga {
 
 Searcher::Searcher(const std::shared_ptr<Evaluator>& eval, SearchHandler* handler)
-  : random_(time(nullptr)), eval_(eval), handler_(handler)
+  : random_(static_cast<unsigned>(time(nullptr))), eval_(eval), handler_(handler)
 #if TT
   , tt_(new TTElement[TTSize])
 #endif
@@ -120,6 +120,7 @@ SearchResult Searcher::Search(const Board& board, int maxDepth, int endingDepth)
 }
 
 void Searcher::StorePV(Board board, const PV& pv, Score score) {
+#if TT
   for (int i = 0; i < pv.length; i++) {
     if (board.MustPass()) {
       board.Pass();
@@ -132,6 +133,7 @@ void Searcher::StorePV(Board board, const PV& pv, Score score) {
 
     board.DoMove(pv.moves[i]);
   }
+#endif
 }
 
 Score Searcher::SearchEnding(Tree& tree, Score alpha, Score beta, bool passed) {
