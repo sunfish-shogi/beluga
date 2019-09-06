@@ -109,11 +109,11 @@ public:
   Bitboard& operator=(const Bitboard&) = default;
   Bitboard& operator=(Bitboard&&) = default;
 
-  bool operator==(const Bitboard& rhs) {
+  bool operator==(const Bitboard& rhs) const {
     return raw_ == rhs.raw_;
   }
 
-  bool operator!=(const Bitboard& rhs) {
+  bool operator!=(const Bitboard& rhs) const {
     return raw_ != rhs.raw_;
   }
 
@@ -282,7 +282,7 @@ public:
   Board& operator=(const Board&) = default;
   Board& operator=(Board&&) = default;
 
-  bool operator==(const Board& rhs) {
+  bool operator==(const Board& rhs) const {
     return black_ == rhs.black_
         && white_ == rhs.white_
         && nextDisk_ == rhs.nextDisk_;
@@ -379,6 +379,16 @@ public:
   TotalScore GetTotalScore() const;
 
   uint64_t GetHash() const;
+
+  bool operator<(const Board& rhs) const {
+    if (black_.GetRaw() != rhs.black_.GetRaw()) {
+      return black_.GetRaw() < rhs.black_.GetRaw();
+    } else if (white_.GetRaw() != rhs.white_.GetRaw()) {
+      return white_.GetRaw() < rhs.white_.GetRaw();
+    } else {
+      return nextDisk_ < rhs.nextDisk_;
+    }
+  }
 
 private:
 

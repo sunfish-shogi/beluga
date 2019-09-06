@@ -1,5 +1,6 @@
 #include "search.h"
 #include <list>
+#include <set>
 #include <iostream>
 #include <random>
 #include <cmath>
@@ -39,13 +40,30 @@ void Learn(std::shared_ptr<Evaluator> eval, int gameCount, int depth, int ending
 
   // generate samples
   std::list<Sample> samples;
+  std::set<Board> bset;
 
   Searcher searcher(eval);
-  for (int i = 0; i < gameCount; i++) {
+  for (int i = 0; i < gameCount; ) {
     std::cout << "\rgenerating samples...(" << (i + 1) << "/" << gameCount << ")" << std::flush;
 
     Board board = Board::GetNormalInitBoard();
     std::list<Board> boards;
+
+    while (!board.IsEnd() && (board.GetBlackBoard() | board.GetWhiteBoard()).Count() < 12) {
+      auto moves = board.GenerateMoves();
+      std::uniform_int_distribution<int32_t> d(0, moves.Count() - 1);
+      Square move;
+      for (auto index = d(r); index >= 0; index--) {
+        move = moves.Pick();
+      }
+      board.DoMove(move);
+    }
+
+    if (bset.find(board) != bset.end()) {
+      continue;
+    } else {
+      bset.insert(board);
+    }
 
     while (!board.IsEnd()) {
       if (board.MustPass()) {
@@ -54,28 +72,20 @@ void Learn(std::shared_ptr<Evaluator> eval, int gameCount, int depth, int ending
       }
 
       auto count = (board.GetBlackBoard() | board.GetWhiteBoard()).Count();
-      if (12 <= count && count < 64 - endingDepth) {
+      if (count < 64 - endingDepth) {
         boards.push_back(board);
       }
 
-      if (count < 12 || count % 7 == 0) {
-        auto moves = board.GenerateMoves();
-        std::uniform_int_distribution<int32_t> d(0, moves.Count() - 1); 
-        Square move; 
-        for (auto index = d(r); index >= 0; index--) { 
-          move = moves.Pick();
-        }
-        board.DoMove(move);
-      } else {
-        auto searchResult = searcher.Search(board, depth, endingDepth);
-        board.DoMove(searchResult.move);
-      }
+      auto searchResult = searcher.Search(board, depth, endingDepth);
+      board.DoMove(searchResult.move);
     }
 
     Score score = (board.GetBlackBoard().Count() - board.GetWhiteBoard().Count()) * ScoreScale;
     for (auto b : boards) {
       samples.push_back({ b, score });
     }
+
+    i++;
   }
   std::cout << "\rgenerating samples...done                 " << std::endl;
 
