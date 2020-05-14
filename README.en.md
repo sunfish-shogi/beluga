@@ -1,26 +1,21 @@
 # beluga
 
-[English](README.en.md)
+Beluga is Computer Reversi Player.
 
-Beluga はリバーシの対局プログラムです。
-
-## ダウンロード
-
-以下から beluga.zip をダウンロードして下さい。
-(現在は Windows 用のみ)
+## Releases
 
 https://github.com/sunfish-shogi/beluga/releases
 
-## スクリーンショット
+## Screenshots
 
 <img src="./screenshots/win01.png" alt="Screenshot01" width="30%"> <img src="./screenshots/win02.png" alt="Screenshot01" width="30%">
 
 <img src="./screenshots/win03.png" alt="Screenshot01" width="30%"> <img src="./screenshots/win04.png" alt="Screenshot01" width="30%">
 
-## ビルド (開発者向け)
+## Build
 
-beluga.sln を Visual Sutudio 2017 以降で開いてください。
+Open beluga.sln by Visual Sutudio 2017 or later.
 
-## ライセンス
+## License
 
 MIT License
