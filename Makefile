@@ -11,6 +11,9 @@ override CFLAGS+=-DNDEBUG
 learn: learn.o $(OBJECTS)
 	$(PP) -o learn $(CFLAGS) $^ $(LIBS)
 
+expt: expt.o $(OBJECTS)
+	$(PP) -o expt $(CFLAGS) $^ $(LIBS)
+
 .cpp.o:
 	$(PP) $(CFLAGS) -o $@ -c $<
 

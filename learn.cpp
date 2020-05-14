@@ -22,7 +22,7 @@ int main(int, const char**, const char**) {
   }
 
   for (int i = 0; i < 10; i++) {
-    Learn(eval, 100000, 3, 10, 256);
+    Learn(eval, 100000, 5, 10, 4);
   }
 
   return 0;
